@@ -1,0 +1,597 @@
+{
+  "info": {
+    "name": "P4-SysListItem-Controller",
+    "description": "系統清單項目管理功能完整測試集合 - 包含系統清單的CRUD操作、類型過濾、權限控制等功能測試",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// 設置基礎URL",
+          "if (!pm.environment.get('baseUrl')) {",
+          "    pm.environment.set('baseUrl', 'http://localhost:8080');",
+          "}",
+          "",
+          "// 檢查認證Token",
+          "if (!pm.environment.get('authToken')) {",
+          "    console.log('警告: 未設置認證Token，某些測試可能會失敗');",
+          "}",
+          "",
+          "// 設置測試資料",
+          "pm.environment.set('testSysListItemName', 'Test Currency Item');",
+          "pm.environment.set('testSysListItemDescription', 'Test currency description');",
+          "pm.environment.set('testSysListItemType', 'currency');",
+          "pm.environment.set('testSysListItemSort', '1');",
+          "pm.environment.set('testSysListItemIconUrl', 'https://example.com/icon.png');"
+        ],
+        "type": "text/javascript"
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// 通用測試腳本",
+          "pm.test('回應時間應小於2秒', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+          "});",
+          "",
+          "pm.test('回應應包含正確的Content-Type', function () {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "});"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "系統清單項目管理功能測試",
+      "item": [
+        {
+          "name": "獲取所有系統清單項目",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('回應應為陣列格式', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('系統清單項目應包含必要欄位', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.length > 0) {",
+                  "        const item = responseJson[0];",
+                  "        pm.expect(item).to.have.property('slId');",
+                  "        pm.expect(item).to.have.property('name');",
+                  "        pm.expect(item).to.have.property('type');",
+                  "        pm.expect(item).to.have.property('sort');",
+                  "        pm.environment.set('existingSysListItemId', item.slId);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/systemlists",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "systemlists"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "創建系統清單項目",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('回應應包含創建的系統清單項目資訊', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('slId');",
+                  "    pm.expect(responseJson).to.have.property('name');",
+                  "    pm.expect(responseJson).to.have.property('description');",
+                  "    pm.expect(responseJson).to.have.property('type');",
+                  "    pm.expect(responseJson).to.have.property('sort');",
+                  "    pm.expect(responseJson).to.have.property('iconUrl');",
+                  "    pm.environment.set('createdSysListItemId', responseJson.slId);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{testSysListItemName}}\",\n  \"description\": \"{{testSysListItemDescription}}\",\n  \"type\": \"{{testSysListItemType}}\",\n  \"sort\": {{testSysListItemSort}},\n  \"iconUrl\": \"{{testSysListItemIconUrl}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/systemlists",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "systemlists"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "獲取系統清單項目詳情",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const sysListItemId = pm.environment.get('createdSysListItemId') || pm.environment.get('existingSysListItemId') || '1';",
+                  "pm.environment.set('currentSysListItemId', sysListItemId);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('回應應包含系統清單項目詳細資訊', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('slId');",
+                  "    pm.expect(responseJson).to.have.property('name');",
+                  "    pm.expect(responseJson).to.have.property('description');",
+                  "    pm.expect(responseJson).to.have.property('type');",
+                  "    pm.expect(responseJson).to.have.property('sort');",
+                  "    pm.expect(responseJson).to.have.property('iconUrl');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/systemlists/{{currentSysListItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "systemlists", "{{currentSysListItemId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "更新系統清單項目",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const sysListItemId = pm.environment.get('createdSysListItemId') || pm.environment.get('existingSysListItemId') || '1';",
+                  "pm.environment.set('updateSysListItemId', sysListItemId);",
+                  "pm.environment.set('updateSysListItemName', 'Updated Currency Item');",
+                  "pm.environment.set('updateSysListItemDescription', 'Updated currency description');",
+                  "pm.environment.set('updateSysListItemType', 'language');",
+                  "pm.environment.set('updateSysListItemSort', '2');",
+                  "pm.environment.set('updateSysListItemIconUrl', 'https://example.com/updated-icon.png');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('回應應包含更新後的系統清單項目資訊', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('slId');",
+                  "    pm.expect(responseJson).to.have.property('name');",
+                  "    pm.expect(responseJson).to.have.property('description');",
+                  "    pm.expect(responseJson).to.have.property('type');",
+                  "    pm.expect(responseJson).to.have.property('sort');",
+                  "    pm.expect(responseJson).to.have.property('iconUrl');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{updateSysListItemName}}\",\n  \"description\": \"{{updateSysListItemDescription}}\",\n  \"type\": \"{{updateSysListItemType}}\",\n  \"sort\": {{updateSysListItemSort}},\n  \"iconUrl\": \"{{updateSysListItemIconUrl}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/systemlists/{{updateSysListItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "systemlists", "{{updateSysListItemId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "按類型獲取系統清單項目",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('回應應為陣列格式', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('所有項目應為指定類型', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    const expectedType = pm.environment.get('testSysListItemType');",
+                  "    responseJson.forEach(item => {",
+                  "        pm.expect(item.type).to.eql(expectedType);",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/typies/{{testSysListItemType}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "typies", "{{testSysListItemType}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "權限與安全測試",
+      "item": [
+        {
+          "name": "無Token創建系統清單項目",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('狀態碼應為401 (未授權)', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('應返回認證錯誤訊息', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Unauthorized Test Item\",\n  \"description\": \"Test description\",\n  \"type\": \"currency\",\n  \"sort\": 1,\n  \"iconUrl\": \"https://example.com/icon.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/systemlists",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "systemlists"]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "無效Token更新系統清單項目",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('狀態碼應為401 (未授權)', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('應返回Token無效錯誤訊息', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid_token_here"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Invalid Token Test\",\n  \"description\": \"Test description\",\n  \"type\": \"currency\",\n  \"sort\": 1,\n  \"iconUrl\": \"https://example.com/icon.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/systemlists/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "systemlists", "1"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "錯誤處理與邊界測試",
+      "item": [
+        {
+          "name": "創建系統清單項目 - 缺少必要欄位",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('狀態碼應為400 (請求錯誤)', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('應返回驗證錯誤訊息', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Missing name field\",\n  \"type\": \"currency\",\n  \"sort\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/systemlists",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "systemlists"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "創建系統清單項目 - 名稱過長",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('狀態碼應為400 (請求錯誤)', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('應返回長度限制錯誤訊息', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"This is a very long system list item name that exceeds the maximum allowed length of 45 characters\",\n  \"description\": \"Test description\",\n  \"type\": \"currency\",\n  \"sort\": 1,\n  \"iconUrl\": \"https://example.com/icon.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/systemlists",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "systemlists"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "創建系統清單項目 - 空字串名稱",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('狀態碼應為400 (請求錯誤)', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('應返回空值錯誤訊息', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"description\": \"Test description\",\n  \"type\": \"currency\",\n  \"sort\": 1,\n  \"iconUrl\": \"https://example.com/icon.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/systemlists",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "systemlists"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "獲取不存在的系統清單項目",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('狀態碼應為404 (未找到)', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('應返回未找到錯誤訊息', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/systemlists/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "systemlists", "99999"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "info": {
+    "name": "P1 - Admin API Tests (Extended)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "擴充覆蓋：Commissions / RevenueShares / Upgrades / Certifications / Invitations"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"]},
+            "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}"}
+          },
+          "event": [
+            {"listen": "test", "script": {"exec": [
+              "pm.test('200', ()=>pm.response.to.have.status(200));",
+              "let j={}; try{j=pm.response.json()}catch(e){}; if(j&&j.token){ pm.environment.set('adminToken', j.token); }",
+              "pm.test('Token 取得', ()=>pm.expect(pm.environment.get('adminToken')).to.be.a('string').and.not.empty);
+              "
+            ], "type": "text/javascript"}}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Commissions",
+      "item": [
+        {
+          "name": "List Commissions",
+          "request": {"method": "GET","header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/commissions","host": ["{{baseUrl}}"],"path": ["api","admin","commissions"]}},
+          "event": [{"listen": "test","script": {"exec": [
+            "pm.test('200', ()=>pm.response.to.have.status(200));",
+            "let j={}; try{j=pm.response.json()}catch(e){}; if(j&&j.content&&j.content.length){ pm.environment.set('commissionId', j.content[0].cId || j.content[0].id); }"
+          ],"type": "text/javascript"}}]
+        },
+        {
+          "name": "Get Commission By String",
+          "request": {"method": "GET","header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/commissions/CO2501010001","host": ["{{baseUrl}}"],"path": ["api","admin","commissions","CO2501010001"]}},
+          "event": [{"listen": "test","script": {"exec": ["pm.test('200 or 404', ()=>pm.expect([200,404]).to.include(pm.response.code));"],"type": "text/javascript"}}]
+        },
+        {
+          "name": "Update Commission Status",
+          "request": {"method": "PUT","header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/commissions/{{commissionId}}/status?newStatus=PAID","host": ["{{baseUrl}}"],"path": ["api","admin","commissions","{{commissionId}}","status"],"query":[{"key":"newStatus","value":"PAID"}]}},
+          "event": [{"listen": "test","script": {"exec": ["pm.test('200/400/404', ()=>pm.expect([200,400,404]).to.include(pm.response.code));"],"type": "text/javascript"}}]
+        }
+      ]
+    },
+    {
+      "name": "RevenueShares",
+      "item": [
+        {"name": "List RevenueShares","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/revenue-shares","host":["{{baseUrl}}"],"path":["api","admin","revenue-shares"]}},"event":[{"listen":"test","script":{"exec":[
+          "pm.test('200', ()=>pm.response.to.have.status(200));",
+          "let j={}; try{j=pm.response.json()}catch(e){}; if(j&&j.content&&j.content.length){ pm.environment.set('revenueShareId', j.content[0].id); }"
+        ],"type":"text/javascript"}}] },
+        {"name":"Update RevenueShare","request":{"method":"PUT","header":[{"key":"Authorization","value":"Bearer {{adminToken}}"},{"key":"Content-Type","value":"application/json"}],"url":{"raw":"{{baseUrl}}/api/admin/revenue-shares/{{revenueShareId}}","host":["{{baseUrl}}"],"path":["api","admin","revenue-shares","{{revenueShareId}}"]},"body":{"mode":"raw","raw":"{\n  \"status\": \"PAID\",\n  \"paymentTime\": \"{{nowIso}}\"\n}"}},"event":[{"listen":"prerequest","script":{"exec":[
+          "pm.environment.set('nowIso', new Date().toISOString());"
+        ],"type":"text/javascript"}},{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "Upgrades",
+      "item": [
+        {"name":"List Upgrades","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url":{"raw":"{{baseUrl}}/api/admin/upgrades","host":["{{baseUrl}}"],"path":["api","admin","upgrades"]}},"event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "Certifications",
+      "item": [
+        {"name":"List Certifications","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url":{"raw":"{{baseUrl}}/api/admin/certifications","host":["{{baseUrl}}"],"path":["api","admin","certifications"]}},"event":[{"listen":"test","script":{"exec":[
+          "pm.test('200', ()=>pm.response.to.have.status(200));",
+          "let j={}; try{j=pm.response.json()}catch(e){}; if(j&&j.content&&j.content.length){ pm.environment.set('certId', j.content[0].cId || j.content[0].id); }"
+        ],"type":"text/javascript"}}] },
+        {"name":"Update Certification","request":{"method":"PUT","header":[{"key":"Authorization","value":"Bearer {{adminToken}}"},{"key":"Content-Type","value":"application/json"}],"url":{"raw":"{{baseUrl}}/api/admin/certifications/{{certId}}","host":["{{baseUrl}}"],"path":["api","admin","certifications","{{certId}}"]},"body":{"mode":"raw","raw":"{\n  \"newStatus\": \"APPROVED\",\n  \"reviewComment\": \"OK\",\n  \"score\": 5.0\n}"}},"event":[{"listen":"test","script":{"exec":["pm.test('200/400/404', ()=>pm.expect([200,400,404]).to.include(pm.response.code));"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "Invitations",
+      "item": [
+        {"name":"List Invitations","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url":{"raw":"{{baseUrl}}/api/admin/invitations","host":["{{baseUrl}}"],"path":["api","admin","invitations"]}},"event":[{"listen":"test","script":{"exec":[
+          "pm.test('200', ()=>pm.response.to.have.status(200));",
+          "let j={}; try{j=pm.response.json()}catch(e){}; if(j&&j.content&&j.content.length){ pm.environment.set('invId', j.content[0].id); }"
+        ],"type":"text/javascript"}}] },
+        {"name":"Update Invitation Status","request":{"method":"PUT","header":[{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url":{"raw":"{{baseUrl}}/api/admin/invitations/{{invId}}/status?newStatus=COMPLETED","host":["{{baseUrl}}"],"path":["api","admin","invitations","{{invId}}","status"],"query":[{"key":"newStatus","value":"COMPLETED"}]}},"event":[{"listen":"test","script":{"exec":["pm.test('200/400/404', ()=>pm.expect([200,400,404]).to.include(pm.response.code));"],"type":"text/javascript"}}] }
+      ]
+    }
+  ]
+}
+

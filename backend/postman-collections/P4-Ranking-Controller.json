@@ -1,0 +1,1063 @@
+{
+  "info": {
+    "name": "P4-Ranking-Controller",
+    "description": "RankingController API測試集合 - 用戶排名和評分管理API，用於計算和管理基於績效指標的服務提供者排名",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 全域前置腳本 - RankingController測試準備",
+          "console.log('=== RankingController API測試開始 ===');",
+          "",
+          "// 設定基本環境變數",
+          "if (!pm.environment.get('baseUrl')) {",
+          "    pm.environment.set('baseUrl', 'http://localhost:8080');",
+          "}",
+          "",
+          "// 設定測試用戶資料",
+          "pm.environment.set('testUserId', '1');",
+          "pm.environment.set('testIndustryId', '1');",
+          "pm.environment.set('testSubIndustryId', '1');",
+          "pm.environment.set('testLocation', 'Taipei');",
+          "pm.environment.set('testNewScore', '85.5');",
+          "pm.environment.set('invalidUserId', '99999');",
+          "pm.environment.set('invalidIndustryId', '99999');",
+          "",
+          "// 設定分頁參數",
+          "pm.environment.set('defaultPage', '0');",
+          "pm.environment.set('defaultSize', '10');",
+          "pm.environment.set('largeSize', '100');",
+          "",
+          "// 檢查認證狀態",
+          "const authToken = pm.environment.get('authToken');",
+          "if (authToken) {",
+          "    console.log('認證Token已設定，長度:', authToken.length);",
+          "} else {",
+          "    console.log('警告: 認證Token未設定，某些測試可能失敗');",
+          "}",
+          "",
+          "// 檢查管理員Token",
+          "const adminToken = pm.environment.get('adminToken');",
+          "if (adminToken) {",
+          "    console.log('管理員Token已設定');",
+          "} else {",
+          "    console.log('警告: 管理員Token未設定，管理員功能測試將失敗');",
+          "}",
+          "",
+          "console.log('前置腳本執行完成');"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 全域測試腳本 - 通用驗證",
+          "console.log('執行全域測試腳本...');",
+          "",
+          "// 基本HTTP狀態檢查",
+          "if (pm.response.code >= 200 && pm.response.code < 300) {",
+          "    console.log('✓ HTTP狀態正常:', pm.response.code);",
+          "} else if (pm.response.code >= 400) {",
+          "    console.log('✗ HTTP錯誤狀態:', pm.response.code);",
+          "}",
+          "",
+          "// 回應時間檢查",
+          "const responseTime = pm.response.responseTime;",
+          "if (responseTime < 5000) {",
+          "    console.log('✓ 回應時間正常:', responseTime + 'ms');",
+          "} else {",
+          "    console.log('⚠ 回應時間較慢:', responseTime + 'ms');",
+          "}",
+          "",
+          "// Content-Type檢查",
+          "const contentType = pm.response.headers.get('Content-Type');",
+          "if (contentType && contentType.includes('application/json')) {",
+          "    console.log('✓ Content-Type正確');",
+          "} else {",
+          "    console.log('⚠ Content-Type異常:', contentType);",
+          "}",
+          "",
+          "console.log('全域測試腳本執行完成');"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "排名查詢功能測試",
+      "item": [
+        {
+          "name": "獲取用戶排名列表 - 基本查詢",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('回應格式應為JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('回應應包含分頁排名資料結構', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('rankings');",
+                  "    pm.expect(jsonData).to.have.property('currentPage');",
+                  "    pm.expect(jsonData).to.have.property('totalPages');",
+                  "    pm.expect(jsonData).to.have.property('totalItems');",
+                  "});",
+                  "",
+                  "pm.test('rankings應為陣列', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.rankings).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('分頁資訊應為數字類型', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.currentPage).to.be.a('number');",
+                  "    pm.expect(jsonData.totalPages).to.be.a('number');",
+                  "    pm.expect(jsonData.totalItems).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('如果有排名資料，應包含必要欄位', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.rankings && jsonData.rankings.length > 0) {",
+                  "        const firstRanking = jsonData.rankings[0];",
+                  "        pm.expect(firstRanking).to.have.property('userId');",
+                  "        pm.expect(firstRanking).to.have.property('userName');",
+                  "        pm.expect(firstRanking).to.have.property('rankingScore');",
+                  "        pm.expect(firstRanking).to.have.property('completedOrderCount');",
+                  "        ",
+                  "        pm.expect(firstRanking.userId).to.be.a('number');",
+                  "        pm.expect(firstRanking.userName).to.be.a('string');",
+                  "        pm.expect(firstRanking.rankingScore).to.be.a('number');",
+                  "        pm.expect(firstRanking.completedOrderCount).to.be.a('number');",
+                  "    }",
+                  "});",
+                  "",
+                  "// 儲存測試資料供後續使用",
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.rankings && jsonData.rankings.length > 0) {",
+                  "    pm.environment.set('firstRankingUserId', jsonData.rankings[0].userId.toString());",
+                  "    pm.environment.set('firstRankingScore', jsonData.rankings[0].rankingScore.toString());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/list?industryId={{testIndustryId}}&page={{defaultPage}}&size={{defaultSize}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "list"],
+              "query": [
+                {
+                  "key": "industryId",
+                  "value": "{{testIndustryId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "{{defaultPage}}"
+                },
+                {
+                  "key": "size",
+                  "value": "{{defaultSize}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "獲取用戶排名列表 - 包含子行業篩選",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('回應應包含分頁排名資料', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('rankings');",
+                  "    pm.expect(jsonData).to.have.property('currentPage');",
+                  "    pm.expect(jsonData).to.have.property('totalPages');",
+                  "    pm.expect(jsonData).to.have.property('totalItems');",
+                  "});",
+                  "",
+                  "pm.test('子行業篩選應正常運作', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.rankings).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/list?industryId={{testIndustryId}}&subIndustryId={{testSubIndustryId}}&page={{defaultPage}}&size={{defaultSize}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "list"],
+              "query": [
+                {
+                  "key": "industryId",
+                  "value": "{{testIndustryId}}"
+                },
+                {
+                  "key": "subIndustryId",
+                  "value": "{{testSubIndustryId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "{{defaultPage}}"
+                },
+                {
+                  "key": "size",
+                  "value": "{{defaultSize}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "獲取用戶排名列表 - 包含地點篩選",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('地點篩選應正常運作', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('rankings');",
+                  "    pm.expect(jsonData.rankings).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/list?industryId={{testIndustryId}}&location={{testLocation}}&page={{defaultPage}}&size={{defaultSize}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "list"],
+              "query": [
+                {
+                  "key": "industryId",
+                  "value": "{{testIndustryId}}"
+                },
+                {
+                  "key": "location",
+                  "value": "{{testLocation}}"
+                },
+                {
+                  "key": "page",
+                  "value": "{{defaultPage}}"
+                },
+                {
+                  "key": "size",
+                  "value": "{{defaultSize}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "獲取用戶排名列表 - 完整篩選條件",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('完整篩選應正常運作', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('rankings');",
+                  "    pm.expect(jsonData).to.have.property('currentPage');",
+                  "    pm.expect(jsonData).to.have.property('totalPages');",
+                  "    pm.expect(jsonData).to.have.property('totalItems');",
+                  "});",
+                  "",
+                  "pm.test('分頁參數應正確', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.currentPage).to.equal(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/list?industryId={{testIndustryId}}&subIndustryId={{testSubIndustryId}}&location={{testLocation}}&page={{defaultPage}}&size={{defaultSize}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "list"],
+              "query": [
+                {
+                  "key": "industryId",
+                  "value": "{{testIndustryId}}"
+                },
+                {
+                  "key": "subIndustryId",
+                  "value": "{{testSubIndustryId}}"
+                },
+                {
+                  "key": "location",
+                  "value": "{{testLocation}}"
+                },
+                {
+                  "key": "page",
+                  "value": "{{defaultPage}}"
+                },
+                {
+                  "key": "size",
+                  "value": "{{defaultSize}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "獲取用戶排名列表 - 分頁測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('分頁功能應正常運作', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('currentPage');",
+                  "    pm.expect(jsonData).to.have.property('totalPages');",
+                  "    pm.expect(jsonData).to.have.property('totalItems');",
+                  "    pm.expect(jsonData.currentPage).to.equal(1);",
+                  "});",
+                  "",
+                  "pm.test('每頁項目數量應符合設定', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.rankings && jsonData.rankings.length > 0) {",
+                  "        pm.expect(jsonData.rankings.length).to.be.at.most(5);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/list?industryId={{testIndustryId}}&page=1&size=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "list"],
+              "query": [
+                {
+                  "key": "industryId",
+                  "value": "{{testIndustryId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "size",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "排名分數管理功能測試",
+      "item": [
+        {
+          "name": "更新用戶排名分數 - 成功案例",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 設定管理員認證Token",
+                  "const adminToken = pm.environment.get('adminToken');",
+                  "if (adminToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Authorization',",
+                  "        value: 'Bearer ' + adminToken",
+                  "    });",
+                  "    console.log('已設定管理員認證Token');",
+                  "} else {",
+                  "    console.log('警告: 管理員Token未設定，測試可能失敗');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('回應格式應為JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('回應應包含用戶排名資料', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('userId');",
+                  "    pm.expect(jsonData).to.have.property('userName');",
+                  "    pm.expect(jsonData).to.have.property('rankingScore');",
+                  "    pm.expect(jsonData).to.have.property('completedOrderCount');",
+                  "});",
+                  "",
+                  "pm.test('用戶ID應正確', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const expectedUserId = parseInt(pm.environment.get('testUserId'));",
+                  "    pm.expect(jsonData.userId).to.equal(expectedUserId);",
+                  "});",
+                  "",
+                  "pm.test('排名分數應已更新', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const expectedScore = parseFloat(pm.environment.get('testNewScore'));",
+                  "    pm.expect(jsonData.rankingScore).to.equal(expectedScore);",
+                  "});",
+                  "",
+                  "pm.test('資料類型應正確', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.userId).to.be.a('number');",
+                  "    pm.expect(jsonData.userName).to.be.a('string');",
+                  "    pm.expect(jsonData.rankingScore).to.be.a('number');",
+                  "    pm.expect(jsonData.completedOrderCount).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{testUserId}},\n  \"newScore\": {{testNewScore}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/updateScore",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "updateScore"]
+            }
+          }
+        },
+        {
+          "name": "更新用戶排名分數 - 用戶不存在",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 設定管理員認證Token",
+                  "const adminToken = pm.environment.get('adminToken');",
+                  "if (adminToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Authorization',",
+                  "        value: 'Bearer ' + adminToken",
+                  "    });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('應正確處理用戶不存在的情況', function () {",
+                  "    pm.expect(pm.response.code).to.equal(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{invalidUserId}},\n  \"newScore\": 75.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/updateScore",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "updateScore"]
+            }
+          }
+        },
+        {
+          "name": "更新用戶排名分數 - 無管理員權限",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 使用一般用戶Token（非管理員）",
+                  "const userToken = pm.environment.get('authToken');",
+                  "if (userToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Authorization',",
+                  "        value: 'Bearer ' + userToken",
+                  "    });",
+                  "    console.log('已設定一般用戶Token');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為403（權限不足）', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test('應正確拒絕非管理員訪問', function () {",
+                  "    pm.expect(pm.response.code).to.equal(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{testUserId}},\n  \"newScore\": 80.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/updateScore",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "updateScore"]
+            }
+          }
+        },
+        {
+          "name": "更新用戶排名分數 - 未認證訪問",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為401（未認證）', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('應正確拒絕未認證訪問', function () {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{testUserId}},\n  \"newScore\": 90.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/updateScore",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "updateScore"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "錯誤處理與邊界測試",
+      "item": [
+        {
+          "name": "獲取排名列表 - 缺少必需參數industryId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為400（參數錯誤）', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('應正確處理缺少必需參數的情況', function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/list?page={{defaultPage}}&size={{defaultSize}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "list"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "{{defaultPage}}"
+                },
+                {
+                  "key": "size",
+                  "value": "{{defaultSize}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "獲取排名列表 - 無效的industryId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200或404', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});",
+                  "",
+                  "pm.test('無效industryId應返回空結果或錯誤', function () {",
+                  "    if (pm.response.code === 200) {",
+                  "        const jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.rankings).to.be.an('array');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/list?industryId={{invalidIndustryId}}&page={{defaultPage}}&size={{defaultSize}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "list"],
+              "query": [
+                {
+                  "key": "industryId",
+                  "value": "{{invalidIndustryId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "{{defaultPage}}"
+                },
+                {
+                  "key": "size",
+                  "value": "{{defaultSize}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "獲取排名列表 - 負數分頁參數",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為400或500', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 500]);",
+                  "});",
+                  "",
+                  "pm.test('應正確處理無效分頁參數', function () {",
+                  "    pm.expect(pm.response.code).to.be.at.least(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/list?industryId={{testIndustryId}}&page=-1&size=-5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "list"],
+              "query": [
+                {
+                  "key": "industryId",
+                  "value": "{{testIndustryId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "-1"
+                },
+                {
+                  "key": "size",
+                  "value": "-5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "更新排名分數 - 無效請求體格式",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 設定管理員認證Token",
+                  "const adminToken = pm.environment.get('adminToken');",
+                  "if (adminToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Authorization',",
+                  "        value: 'Bearer ' + adminToken",
+                  "    });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為400（請求格式錯誤）', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('應正確處理無效請求體', function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invalidField\": \"invalidValue\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/updateScore",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "updateScore"]
+            }
+          }
+        },
+        {
+          "name": "更新排名分數 - 空請求體",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 設定管理員認證Token",
+                  "const adminToken = pm.environment.get('adminToken');",
+                  "if (adminToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Authorization',",
+                  "        value: 'Bearer ' + adminToken",
+                  "    });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為400（請求體為空）', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('應正確處理空請求體', function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/updateScore",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "updateScore"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "排名系統性能測試",
+      "item": [
+        {
+          "name": "大量資料分頁測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('大量資料查詢應在合理時間內完成', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(10000);",
+                  "});",
+                  "",
+                  "pm.test('大量資料應正確分頁', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('rankings');",
+                  "    pm.expect(jsonData).to.have.property('currentPage');",
+                  "    pm.expect(jsonData).to.have.property('totalPages');",
+                  "    pm.expect(jsonData).to.have.property('totalItems');",
+                  "    ",
+                  "    if (jsonData.rankings && jsonData.rankings.length > 0) {",
+                  "        pm.expect(jsonData.rankings.length).to.be.at.most(100);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/list?industryId={{testIndustryId}}&page=0&size={{largeSize}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "list"],
+              "query": [
+                {
+                  "key": "industryId",
+                  "value": "{{testIndustryId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "{{largeSize}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "排名分數邊界值測試 - 最高分",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 設定管理員認證Token",
+                  "const adminToken = pm.environment.get('adminToken');",
+                  "if (adminToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Authorization',",
+                  "        value: 'Bearer ' + adminToken",
+                  "    });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('應接受最高分數值', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.rankingScore).to.equal(100.0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{testUserId}},\n  \"newScore\": 100.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/updateScore",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "updateScore"]
+            }
+          }
+        },
+        {
+          "name": "排名分數邊界值測試 - 最低分",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 設定管理員認證Token",
+                  "const adminToken = pm.environment.get('adminToken');",
+                  "if (adminToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Authorization',",
+                  "        value: 'Bearer ' + adminToken",
+                  "    });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('應接受最低分數值', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.rankingScore).to.equal(0.0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{testUserId}},\n  \"newScore\": 0.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ranking/updateScore",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranking", "updateScore"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+                

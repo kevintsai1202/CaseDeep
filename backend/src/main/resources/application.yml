@@ -1,0 +1,71 @@
+server:
+  port: 8080
+#  ssl:
+#    key-store: classpath:keystore.p12
+#    key-store-password: abc123
+#    key-store-type: PKCS12
+#    key-alias: mycert
+spring:
+  mail:
+#    host: smtp.gmail.com
+#    port: 465
+#    username: kevintsai1202
+#    password: cvpa oyzz xpzw txxa  
+    host: mail.privateemail.com # #casedeep.com
+    port: 465
+    username: support@casedeep.com
+    password: Hicase5678bid  
+    properties:
+      mail:
+        smtp:
+          ssl:
+            enable: true
+          auth: true
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: false
+    serialization:
+      fail-on-empty-beans: false
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: -1
+      max-request-size: -1
+#  h2:
+#    console:
+#      enabled: true
+      
+  datasource:
+#     MySql
+#    url: jdbc:mysql://mysql:3306/project
+    url: jdbc:mysql://162.43.92.30:3307/project
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: Abc123
+
+#     h2
+#    url: jdbc:h2:file:./testdb
+#    driver-class-name: org.h2.Driver
+#    username: sa
+#    password:
+    type: org.apache.tomcat.jdbc.pool.DataSource
+  jpa:
+#    show-sql: true
+    hibernate:
+      ddl-auto: update
+#     MySql
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data.sql
+
+#     h2
+#    database: h2
+#    database-platform: org.hibernate.dialect.H2Dialect
+jwt:
+  secretKey: 32qdhg564t34fewj6721434tf&$%R@$F 
+  lifeTime: 7200
+module-name: 合約管理平台
+api-version: v1

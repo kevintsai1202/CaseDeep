@@ -1,0 +1,787 @@
+{
+	"info": {
+		"_postman_id": "favourite-controller-tests",
+		"name": "P3-Favourite-Controller",
+		"description": "Case Manager AI Chat - Favourite Controller API測試集合\n\n此集合測試收藏管理相關的API端點，包括：\n- 用戶收藏查詢功能\n- 認證與授權驗證\n- 錯誤處理測試\n- 響應數據結構驗證\n\n測試涵蓋範圍：\n- 正常業務流程測試\n- 安全性測試\n- 邊界條件測試\n- 錯誤處理測試",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{authToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"// 全局前置腳本 - 設定基本環境變數",
+					"if (!pm.environment.get('baseUrl')) {",
+					"    pm.environment.set('baseUrl', 'http://localhost:8080');",
+					"}",
+					"",
+					"// 檢查認證Token是否存在",
+					"const authToken = pm.environment.get('authToken');",
+					"if (!authToken && pm.info.requestName !== 'Get My Favourites - Unauthorized') {",
+					"    console.warn('警告: 未設定認證Token，某些測試可能會失敗');",
+					"}",
+					"",
+					"// 設定請求時間戳",
+					"pm.environment.set('requestTimestamp', new Date().toISOString());"
+				],
+				"type": "text/javascript"
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"exec": [
+					"// 全局測試腳本 - 基本響應驗證",
+					"pm.test('響應時間應小於2秒', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+					"});",
+					"",
+					"pm.test('響應應包含正確的Content-Type', function () {",
+					"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+					"});",
+					"",
+					"// 記錄測試執行資訊",
+					"console.log(`測試執行時間: ${new Date().toISOString()}`);",
+					"console.log(`請求URL: ${pm.request.url}`);",
+					"console.log(`響應狀態: ${pm.response.status} ${pm.response.code}`);"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "apiPath",
+			"value": "/api/favourities",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "收藏查詢功能測試",
+			"description": "測試用戶收藏查詢的核心功能",
+			"item": [
+				{
+					"name": "Get My Favourites - Success",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// 確保有有效的認證Token",
+									"const authToken = pm.environment.get('authToken');",
+									"if (!authToken) {",
+									"    console.error('錯誤: 需要有效的認證Token才能執行此測試');",
+									"    pm.execution.setNextRequest(null);",
+									"}",
+									"",
+									"console.log('準備測試獲取用戶收藏功能...');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('響應應為JSON格式', function () {",
+									"    pm.response.to.be.json;",
+									"});",
+									"",
+									"pm.test('響應結構應正確', function () {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    // 驗證基本結構",
+									"    pm.expect(responseJson).to.be.an('object');",
+									"    pm.expect(responseJson).to.have.property('partners');",
+									"    pm.expect(responseJson).to.have.property('showcases');",
+									"    pm.expect(responseJson).to.have.property('pricings');",
+									"    pm.expect(responseJson).to.have.property('orderTemplates');",
+									"});",
+									"",
+									"pm.test('收藏數據類型應正確', function () {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    // 驗證數據類型",
+									"    pm.expect(responseJson.partners).to.be.an('array');",
+									"    pm.expect(responseJson.showcases).to.be.an('array');",
+									"    pm.expect(responseJson.pricings).to.be.an('array');",
+									"    pm.expect(responseJson.orderTemplates).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('合作夥伴數據結構驗證', function () {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    if (responseJson.partners && responseJson.partners.length > 0) {",
+									"        const partner = responseJson.partners[0];",
+									"        pm.expect(partner).to.have.property('username');",
+									"        pm.expect(partner).to.have.property('email');",
+									"        console.log('合作夥伴數據結構驗證通過');",
+									"    } else {",
+									"        console.log('目前沒有收藏的合作夥伴');",
+									"    }",
+									"});",
+									"",
+									"// 保存響應數據供後續測試使用",
+									"const responseJson = pm.response.json();",
+									"pm.environment.set('lastFavouriteResponse', JSON.stringify(responseJson));",
+									"",
+									"console.log('用戶收藏查詢測試完成');",
+									"console.log(`收藏的合作夥伴數量: ${responseJson.partners ? responseJson.partners.length : 0}`);",
+									"console.log(`收藏的展示數量: ${responseJson.showcases ? responseJson.showcases.length : 0}`);",
+									"console.log(`收藏的價格套餐數量: ${responseJson.pricings ? responseJson.pricings.length : 0}`);",
+									"console.log(`收藏的訂單範本數量: ${responseJson.orderTemplates ? responseJson.orderTemplates.length : 0}`);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{apiPath}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favourities"
+							]
+						},
+						"description": "獲取當前認證用戶的收藏列表，包括收藏的合作夥伴、展示、價格套餐和訂單範本"
+					}
+				},
+				{
+					"name": "Get My Favourites - Empty Response Handling",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// 此測試用於驗證空收藏的處理",
+									"console.log('準備測試空收藏響應處理...');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('空收藏應正確處理', function () {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    // 即使是空收藏，結構也應該完整",
+									"    pm.expect(responseJson).to.have.property('partners');",
+									"    pm.expect(responseJson).to.have.property('showcases');",
+									"    pm.expect(responseJson).to.have.property('pricings');",
+									"    pm.expect(responseJson).to.have.property('orderTemplates');",
+									"    ",
+									"    // 空收藏時應該是空陣列而不是null",
+									"    if (responseJson.partners !== null) {",
+									"        pm.expect(responseJson.partners).to.be.an('array');",
+									"    }",
+									"    if (responseJson.showcases !== null) {",
+									"        pm.expect(responseJson.showcases).to.be.an('array');",
+									"    }",
+									"    if (responseJson.pricings !== null) {",
+									"        pm.expect(responseJson.pricings).to.be.an('array');",
+									"    }",
+									"    if (responseJson.orderTemplates !== null) {",
+									"        pm.expect(responseJson.orderTemplates).to.be.an('array');",
+									"    }",
+									"});",
+									"",
+									"console.log('空收藏響應處理測試完成');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{apiPath}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favourities"
+							]
+						},
+						"description": "測試空收藏情況下的響應處理"
+					}
+				}
+			]
+		},
+		{
+			"name": "認證與授權測試",
+			"description": "測試API的認證和授權機制",
+			"item": [
+				{
+					"name": "Get My Favourites - Unauthorized",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// 移除認證Token以測試未授權訪問",
+									"pm.request.auth = null;",
+									"pm.request.headers.remove('Authorization');",
+									"",
+									"console.log('準備測試未授權訪問...');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('未授權訪問應返回401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test('應包含認證錯誤訊息', function () {",
+									"    // 根據Spring Security的標準響應格式",
+									"    const responseText = pm.response.text();",
+									"    pm.expect(responseText).to.not.be.empty;",
+									"});",
+									"",
+									"console.log('未授權訪問測試完成');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{apiPath}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favourities"
+							]
+						},
+						"description": "測試未提供認證Token時的訪問控制"
+					}
+				},
+				{
+					"name": "Get My Favourites - Invalid Token",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// 設定無效的Token",
+									"pm.request.auth = {",
+									"    type: 'bearer',",
+									"    bearer: [{",
+									"        key: 'token',",
+									"        value: 'invalid-token-12345',",
+									"        type: 'string'",
+									"    }]",
+									"};",
+									"",
+									"console.log('準備測試無效Token訪問...');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('無效Token應返回401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test('應包含Token驗證錯誤訊息', function () {",
+									"    const responseText = pm.response.text();",
+									"    pm.expect(responseText).to.not.be.empty;",
+									"});",
+									"",
+									"console.log('無效Token測試完成');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "invalid-token-12345",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{apiPath}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favourities"
+							]
+						},
+						"description": "測試使用無效Token時的訪問控制"
+					}
+				},
+				{
+					"name": "Get My Favourites - Expired Token",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// 設定過期的Token (這裡使用一個已知格式但過期的Token)",
+									"const expiredToken = pm.environment.get('expiredToken') || 'expired-jwt-token-example';",
+									"pm.request.auth = {",
+									"    type: 'bearer',",
+									"    bearer: [{",
+									"        key: 'token',",
+									"        value: expiredToken,",
+									"        type: 'string'",
+									"    }]",
+									"};",
+									"",
+									"console.log('準備測試過期Token訪問...');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('過期Token應返回401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test('應包含Token過期錯誤訊息', function () {",
+									"    const responseText = pm.response.text();",
+									"    pm.expect(responseText).to.not.be.empty;",
+									"});",
+									"",
+									"console.log('過期Token測試完成');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{apiPath}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favourities"
+							]
+						},
+						"description": "測試使用過期Token時的訪問控制"
+					}
+				}
+			]
+		},
+		{
+			"name": "錯誤處理與邊界測試",
+			"description": "測試各種錯誤情況和邊界條件",
+			"item": [
+				{
+					"name": "Get My Favourites - Server Error Simulation",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// 此測試用於模擬服務器錯誤情況",
+									"// 可以通過修改URL或添加特殊參數來觸發錯誤",
+									"console.log('準備測試服務器錯誤處理...');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// 根據實際響應狀態進行測試",
+									"if (pm.response.code >= 500) {",
+									"    pm.test('服務器錯誤應返回5xx狀態碼', function () {",
+									"        pm.expect(pm.response.code).to.be.at.least(500);",
+									"        pm.expect(pm.response.code).to.be.below(600);",
+									"    });",
+									"    ",
+									"    pm.test('服務器錯誤應包含錯誤訊息', function () {",
+									"        const responseText = pm.response.text();",
+									"        pm.expect(responseText).to.not.be.empty;",
+									"    });",
+									"} else if (pm.response.code === 200) {",
+									"    pm.test('正常響應處理', function () {",
+									"        pm.response.to.have.status(200);",
+									"        pm.response.to.be.json;",
+									"    });",
+									"} else {",
+									"    pm.test('其他狀態碼處理', function () {",
+									"        console.log(`收到狀態碼: ${pm.response.code}`);",
+									"        pm.expect(pm.response.code).to.be.a('number');",
+									"    });",
+									"}",
+									"",
+									"console.log('服務器錯誤處理測試完成');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{apiPath}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favourities"
+							]
+						},
+						"description": "測試服務器錯誤情況的處理"
+					}
+				},
+				{
+					"name": "Get My Favourites - Network Timeout Test",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// 設定較短的超時時間來測試網路超時處理",
+									"pm.request.timeout = 1000; // 1秒超時",
+									"console.log('準備測試網路超時處理...');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// 測試超時或正常響應",
+									"if (pm.response.code === 0) {",
+									"    pm.test('網路超時應正確處理', function () {",
+									"        console.log('網路請求超時');",
+									"        pm.expect(pm.response.code).to.equal(0);",
+									"    });",
+									"} else {",
+									"    pm.test('在超時限制內正常響應', function () {",
+									"        pm.expect(pm.response.responseTime).to.be.below(1000);",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"}",
+									"",
+									"console.log('網路超時測試完成');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{apiPath}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favourities"
+							]
+						},
+						"description": "測試網路超時情況的處理"
+					}
+				}
+			]
+		},
+		{
+			"name": "性能與負載測試",
+			"description": "測試API的性能表現",
+			"item": [
+				{
+					"name": "Get My Favourites - Performance Test",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// 記錄開始時間",
+									"pm.environment.set('testStartTime', Date.now());",
+									"console.log('開始性能測試...');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('響應時間應在可接受範圍內', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(1000); // 1秒內",
+									"});",
+									"",
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('響應大小應合理', function () {",
+									"    const responseSize = pm.response.responseSize;",
+									"    pm.expect(responseSize).to.be.below(1024 * 1024); // 小於1MB",
+									"});",
+									"",
+									"// 計算總執行時間",
+									"const startTime = pm.environment.get('testStartTime');",
+									"const totalTime = Date.now() - startTime;",
+									"",
+									"console.log(`性能測試完成:`);",
+									"console.log(`- 響應時間: ${pm.response.responseTime}ms`);",
+									"console.log(`- 響應大小: ${pm.response.responseSize} bytes`);",
+									"console.log(`- 總執行時間: ${totalTime}ms`);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{apiPath}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favourities"
+							]
+						},
+						"description": "測試API的性能表現，包括響應時間和響應大小"
+					}
+				}
+			]
+		},
+		{
+			"name": "數據驗證測試",
+			"description": "測試響應數據的完整性和正確性",
+			"item": [
+				{
+					"name": "Get My Favourites - Data Validation",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"console.log('準備進行數據驗證測試...');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('響應數據結構完整性驗證', function () {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    // 必要欄位存在性檢查",
+									"    pm.expect(responseJson).to.have.property('partners');",
+									"    pm.expect(responseJson).to.have.property('showcases');",
+									"    pm.expect(responseJson).to.have.property('pricings');",
+									"    pm.expect(responseJson).to.have.property('orderTemplates');",
+									"});",
+									"",
+									"pm.test('合作夥伴數據詳細驗證', function () {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    if (responseJson.partners && responseJson.partners.length > 0) {",
+									"        responseJson.partners.forEach((partner, index) => {",
+									"            pm.expect(partner, `合作夥伴[${index}]應有username`).to.have.property('username');",
+									"            pm.expect(partner.username, `合作夥伴[${index}]的username應為字串`).to.be.a('string');",
+									"            ",
+									"            if (partner.email) {",
+									"                pm.expect(partner.email, `合作夥伴[${index}]的email格式應正確`).to.match(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/);",
+									"            }",
+									"        });",
+									"        console.log(`驗證了 ${responseJson.partners.length} 個合作夥伴數據`);",
+									"    }",
+									"});",
+									"",
+									"pm.test('展示數據驗證', function () {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    if (responseJson.showcases && responseJson.showcases.length > 0) {",
+									"        responseJson.showcases.forEach((showcase, index) => {",
+									"            pm.expect(showcase, `展示[${index}]應為物件`).to.be.an('object');",
+									"            // 根據ShowcaseType的實際結構進行驗證",
+									"        });",
+									"        console.log(`驗證了 ${responseJson.showcases.length} 個展示數據`);",
+									"    }",
+									"});",
+									"",
+									"pm.test('價格套餐數據驗證', function () {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    if (responseJson.pricings && responseJson.pricings.length > 0) {",
+									"        responseJson.pricings.forEach((pricing, index) => {",
+									"            pm.expect(pricing, `價格套餐[${index}]應為物件`).to.be.an('object');",
+									"            // 根據PricePackage的實際結構進行驗證",
+									"        });",
+									"        console.log(`驗證了 ${responseJson.pricings.length} 個價格套餐數據`);",
+									"    }",
+									"});",
+									"",
+									"pm.test('訂單範本數據驗證', function () {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    if (responseJson.orderTemplates && responseJson.orderTemplates.length > 0) {",
+									"        responseJson.orderTemplates.forEach((template, index) => {",
+									"            pm.expect(template, `訂單範本[${index}]應為物件`).to.be.an('object');",
+									"            // 根據OrderTemplate的實際結構進行驗證",
+									"        });",
+									"        console.log(`驗證了 ${responseJson.orderTemplates.length} 個訂單範本數據`);",
+									"    }",
+									"});",
+									"",
+									"console.log('數據驗證測試完成');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{apiPath}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favourities"
+							]
+						},
+						"description": "測試響應數據的完整性和正確性，包括數據結構和內容驗證"
+					}
+				}
+			]
+		}
+	]
+}

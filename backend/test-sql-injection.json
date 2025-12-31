@@ -1,0 +1,4 @@
+{
+    "username": "admin'; DROP TABLE users; --",
+    "password": "' OR '1'='1"
+}

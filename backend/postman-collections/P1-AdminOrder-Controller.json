@@ -1,0 +1,1100 @@
+{
+  "info": {
+    "name": "P1-AdminOrder-Controller",
+    "description": "管理員訂單管理控制器測試集合 - 包含訂單查詢、詳情獲取、狀態管理等功能的完整測試",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 通用前置腳本 - 管理員訂單管理測試",
+          "console.log('=== P1-AdminOrder-Controller 前置腳本執行 ===');",
+          "",
+          "// 檢查必要的環境變數",
+          "const requiredVars = ['baseUrl', 'authToken'];",
+          "const missingVars = requiredVars.filter(varName => !pm.environment.get(varName));",
+          "",
+          "if (missingVars.length > 0) {",
+          "    console.error('缺少必要的環境變數:', missingVars);",
+          "    throw new Error(`請設置環境變數: ${missingVars.join(', ')}`);",
+          "}",
+          "",
+          "// 設置請求標頭",
+          "pm.request.headers.add({",
+          "    key: 'Content-Type',",
+          "    value: 'application/json'",
+          "});",
+          "",
+          "pm.request.headers.add({",
+          "    key: 'Accept',",
+          "    value: 'application/json'",
+          "});",
+          "",
+          "// 初始化測試資料變數（如果不存在）",
+          "if (!pm.environment.get('testOrderId')) {",
+          "    pm.environment.set('testOrderId', '1');",
+          "}",
+          "",
+          "if (!pm.environment.get('testOrderBase62')) {",
+          "    pm.environment.set('testOrderBase62', 'testOrder123');",
+          "}",
+          "",
+          "console.log('前置腳本執行完成，開始API測試...');"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 通用測試腳本 - 管理員訂單管理",
+          "console.log('=== P1-AdminOrder-Controller 通用測試腳本 ===');",
+          "",
+          "// 通用測試函數庫",
+          "const TestUtils = {",
+          "    // 驗證回應狀態碼",
+          "    validateStatusCode: function(expectedCode, description) {",
+          "        pm.test(`${description} - 狀態碼應為 ${expectedCode}`, function() {",
+          "            pm.response.to.have.status(expectedCode);",
+          "        });",
+          "    },",
+          "",
+          "    // 驗證回應時間",
+          "    validateResponseTime: function(maxTime = 2000) {",
+          "        pm.test('回應時間應小於 ' + maxTime + 'ms', function() {",
+          "            pm.expect(pm.response.responseTime).to.be.below(maxTime);",
+          "        });",
+          "    },",
+          "",
+          "    // 驗證JSON回應格式",
+          "    validateJsonResponse: function() {",
+          "        pm.test('回應應為有效的JSON格式', function() {",
+          "            pm.response.to.be.json;",
+          "        });",
+          "    },",
+          "",
+          "    // 驗證分頁回應結構",
+          "    validatePageResponse: function(responseJson) {",
+          "        pm.test('分頁回應結構驗證', function() {",
+          "            pm.expect(responseJson).to.have.property('content');",
+          "            pm.expect(responseJson).to.have.property('pageable');",
+          "            pm.expect(responseJson).to.have.property('totalElements');",
+          "            pm.expect(responseJson).to.have.property('totalPages');",
+          "            pm.expect(responseJson).to.have.property('size');",
+          "            pm.expect(responseJson).to.have.property('number');",
+          "            pm.expect(responseJson.content).to.be.an('array');",
+          "        });",
+          "    },",
+          "",
+          "    // 驗證訂單回應結構",
+          "    validateOrderResponse: function(order) {",
+          "        pm.test('訂單回應結構驗證', function() {",
+          "            pm.expect(order).to.have.property('orderNoBase62');",
+          "            pm.expect(order).to.have.property('status');",
+          "            pm.expect(order).to.have.property('confirmations');",
+          "            pm.expect(order).to.have.property('contracts');",
+          "            pm.expect(order).to.have.property('payments');",
+          "            pm.expect(order).to.have.property('deliveries');",
+          "            pm.expect(order.confirmations).to.be.an('array');",
+          "            pm.expect(order.contracts).to.be.an('array');",
+          "            pm.expect(order.payments).to.be.an('array');",
+          "            pm.expect(order.deliveries).to.be.an('array');",
+          "        });",
+          "    },",
+          "",
+          "    // 驗證訂單狀態",
+          "    validateOrderStatus: function(status) {",
+          "        const validStatuses = [",
+          "            'inquiry', 'quote_request', 'quote_sent', 'quote_accept',",
+          "            'awaiting_payment', 'in_progress', 'delivered', 'in_revision',",
+          "            'completed', 'cancelled'",
+          "        ];",
+          "        pm.test('訂單狀態應為有效值', function() {",
+          "            pm.expect(validStatuses).to.include(status);",
+          "        });",
+          "    },",
+          "",
+          "    // 驗證錯誤回應",
+          "    validateErrorResponse: function(responseJson, expectedMessage) {",
+          "        pm.test('錯誤回應格式驗證', function() {",
+          "            pm.expect(responseJson).to.have.property('error');",
+          "            if (expectedMessage) {",
+          "                pm.expect(responseJson.error).to.include(expectedMessage);",
+          "            }",
+          "        });",
+          "    },",
+          "",
+          "    // 記錄測試結果",
+          "    logTestResult: function(testName, success, details) {",
+          "        const timestamp = new Date().toISOString();",
+          "        const result = {",
+          "            test: testName,",
+          "            success: success,",
+          "            timestamp: timestamp,",
+          "            details: details || ''",
+          "        };",
+          "        console.log('測試結果:', JSON.stringify(result, null, 2));",
+          "    }",
+          "};",
+          "",
+          "// 將工具函數設置為全域變數",
+          "pm.globals.set('TestUtils', JSON.stringify(TestUtils));"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. 訂單查詢管理測試",
+      "item": [
+        {
+          "name": "1.1 獲取訂單列表 - 正常查詢",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 獲取訂單列表 - 正常查詢測試",
+                  "console.log('=== 測試：獲取訂單列表 - 正常查詢 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 基本驗證",
+                  "TestUtils.validateStatusCode(200, '獲取訂單列表');",
+                  "TestUtils.validateResponseTime(3000);",
+                  "TestUtils.validateJsonResponse();",
+                  "",
+                  "// 解析回應",
+                  "let responseJson;",
+                  "try {",
+                  "    responseJson = pm.response.json();",
+                  "} catch (e) {",
+                  "    pm.test('JSON解析失敗', function() {",
+                  "        pm.expect.fail('無法解析回應JSON: ' + e.message);",
+                  "    });",
+                  "    return;",
+                  "}",
+                  "",
+                  "// 驗證分頁結構",
+                  "TestUtils.validatePageResponse(responseJson);",
+                  "",
+                  "// 驗證訂單列表內容",
+                  "pm.test('訂單列表內容驗證', function() {",
+                  "    if (responseJson.content.length > 0) {",
+                  "        const firstOrder = responseJson.content[0];",
+                  "        TestUtils.validateOrderResponse(firstOrder);",
+                  "        TestUtils.validateOrderStatus(firstOrder.status);",
+                  "        ",
+                  "        // 保存第一個訂單ID供後續測試使用",
+                  "        if (firstOrder.orderNoBase62) {",
+                  "            pm.environment.set('testOrderBase62', firstOrder.orderNoBase62);",
+                  "        }",
+                  "    }",
+                  "});",
+                  "",
+                  "// 驗證分頁參數",
+                  "pm.test('分頁參數驗證', function() {",
+                  "    pm.expect(responseJson.size).to.be.a('number');",
+                  "    pm.expect(responseJson.number).to.be.a('number');",
+                  "    pm.expect(responseJson.totalElements).to.be.a('number');",
+                  "    pm.expect(responseJson.totalPages).to.be.a('number');",
+                  "    pm.expect(responseJson.size).to.be.at.least(1);",
+                  "    pm.expect(responseJson.number).to.be.at.least(0);",
+                  "});",
+                  "",
+                  "TestUtils.logTestResult('獲取訂單列表-正常查詢', pm.response.code === 200, ",
+                  "    `返回 ${responseJson.content.length} 筆訂單，總計 ${responseJson.totalElements} 筆`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders?page=0&size=10&sort=id,desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "頁碼（從0開始）"
+                },
+                {
+                  "key": "size",
+                  "value": "10",
+                  "description": "每頁筆數"
+                },
+                {
+                  "key": "sort",
+                  "value": "id,desc",
+                  "description": "排序方式"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.2 獲取訂單列表 - 分頁測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 獲取訂單列表 - 分頁測試",
+                  "console.log('=== 測試：獲取訂單列表 - 分頁測試 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 基本驗證",
+                  "TestUtils.validateStatusCode(200, '分頁查詢訂單列表');",
+                  "TestUtils.validateResponseTime();",
+                  "TestUtils.validateJsonResponse();",
+                  "",
+                  "// 解析回應",
+                  "const responseJson = pm.response.json();",
+                  "",
+                  "// 驗證分頁結構",
+                  "TestUtils.validatePageResponse(responseJson);",
+                  "",
+                  "// 驗證分頁參數正確性",
+                  "pm.test('分頁參數正確性驗證', function() {",
+                  "    pm.expect(responseJson.size).to.equal(5); // 請求的每頁筆數",
+                  "    pm.expect(responseJson.number).to.equal(1); // 請求的頁碼",
+                  "    pm.expect(responseJson.content.length).to.be.at.most(5);",
+                  "});",
+                  "",
+                  "TestUtils.logTestResult('獲取訂單列表-分頁測試', pm.response.code === 200,",
+                  "    `第2頁，每頁5筆，實際返回 ${responseJson.content.length} 筆`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders?page=1&size=5&sort=id,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "第2頁"
+                },
+                {
+                  "key": "size",
+                  "value": "5",
+                  "description": "每頁5筆"
+                },
+                {
+                  "key": "sort",
+                  "value": "id,asc",
+                  "description": "按ID升序排列"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.3 獲取訂單列表 - 權限測試",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 暫時移除認證Token以測試權限",
+                  "pm.request.removeHeader('Authorization');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 獲取訂單列表 - 權限測試",
+                  "console.log('=== 測試：獲取訂單列表 - 權限測試 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 驗證未授權訪問",
+                  "TestUtils.validateStatusCode(401, '未授權訪問應返回401');",
+                  "TestUtils.validateResponseTime();",
+                  "",
+                  "TestUtils.logTestResult('獲取訂單列表-權限測試', pm.response.code === 401,",
+                  "    '未提供認證Token時正確拒絕訪問');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. 訂單詳情查詢測試",
+      "item": [
+        {
+          "name": "2.1 獲取訂單詳情 - 正常查詢",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 獲取訂單詳情 - 正常查詢測試",
+                  "console.log('=== 測試：獲取訂單詳情 - 正常查詢 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 基本驗證",
+                  "TestUtils.validateStatusCode(200, '獲取訂單詳情');",
+                  "TestUtils.validateResponseTime();",
+                  "TestUtils.validateJsonResponse();",
+                  "",
+                  "// 解析回應",
+                  "const responseJson = pm.response.json();",
+                  "",
+                  "// 驗證訂單詳情結構",
+                  "TestUtils.validateOrderResponse(responseJson);",
+                  "TestUtils.validateOrderStatus(responseJson.status);",
+                  "",
+                  "// 驗證詳細資訊",
+                  "pm.test('訂單詳情完整性驗證', function() {",
+                  "    pm.expect(responseJson.orderNoBase62).to.be.a('string');",
+                  "    pm.expect(responseJson.orderNoBase62).to.not.be.empty;",
+                  "    pm.expect(responseJson.status).to.be.a('string');",
+                  "    pm.expect(responseJson.status).to.not.be.empty;",
+                  "});",
+                  "",
+                  "// 保存訂單資訊供後續測試使用",
+                  "pm.environment.set('currentOrderStatus', responseJson.status);",
+                  "pm.environment.set('currentOrderBase62', responseJson.orderNoBase62);",
+                  "",
+                  "TestUtils.logTestResult('獲取訂單詳情-正常查詢', pm.response.code === 200,",
+                  "    `訂單號: ${responseJson.orderNoBase62}, 狀態: ${responseJson.status}`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders/{{testOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders", "{{testOrderId}}"]
+            }
+          }
+        },
+        {
+          "name": "2.2 獲取訂單詳情 - 不存在的訂單",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 獲取訂單詳情 - 不存在的訂單測試",
+                  "console.log('=== 測試：獲取訂單詳情 - 不存在的訂單 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 驗證404回應",
+                  "TestUtils.validateStatusCode(404, '不存在的訂單應返回404');",
+                  "TestUtils.validateResponseTime();",
+                  "",
+                  "TestUtils.logTestResult('獲取訂單詳情-不存在訂單', pm.response.code === 404,",
+                  "    '查詢不存在的訂單ID時正確返回404');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders", "999999"]
+            }
+          }
+        },
+        {
+          "name": "2.3 獲取訂單詳情 - 無效ID格式",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 獲取訂單詳情 - 無效ID格式測試",
+                  "console.log('=== 測試：獲取訂單詳情 - 無效ID格式 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 驗證400回應",
+                  "TestUtils.validateStatusCode(400, '無效ID格式應返回400');",
+                  "TestUtils.validateResponseTime();",
+                  "",
+                  "TestUtils.logTestResult('獲取訂單詳情-無效ID格式', pm.response.code === 400,",
+                  "    '使用無效ID格式時正確返回400錯誤');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders/invalid-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders", "invalid-id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. 訂單狀態管理測試",
+      "item": [
+        {
+          "name": "3.1 更新訂單狀態 - 正常更新",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 更新訂單狀態 - 正常更新測試",
+                  "console.log('=== 測試：更新訂單狀態 - 正常更新 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 基本驗證",
+                  "TestUtils.validateStatusCode(200, '更新訂單狀態');",
+                  "TestUtils.validateResponseTime();",
+                  "TestUtils.validateJsonResponse();",
+                  "",
+                  "// 解析回應",
+                  "const responseJson = pm.response.json();",
+                  "",
+                  "// 驗證更新後的訂單資訊",
+                  "TestUtils.validateOrderResponse(responseJson);",
+                  "",
+                  "// 驗證狀態已更新",
+                  "pm.test('訂單狀態更新驗證', function() {",
+                  "    pm.expect(responseJson.status).to.equal('in_progress');",
+                  "});",
+                  "",
+                  "// 保存更新後的狀態",
+                  "pm.environment.set('updatedOrderStatus', responseJson.status);",
+                  "",
+                  "TestUtils.logTestResult('更新訂單狀態-正常更新', pm.response.code === 200,",
+                  "    `狀態已更新為: ${responseJson.status}`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders/{{testOrderId}}/status?newStatus=in_progress&reason=管理員手動更新狀態",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders", "{{testOrderId}}", "status"],
+              "query": [
+                {
+                  "key": "newStatus",
+                  "value": "in_progress",
+                  "description": "新的訂單狀態"
+                },
+                {
+                  "key": "reason",
+                  "value": "管理員手動更新狀態",
+                  "description": "狀態變更原因"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.2 更新訂單狀態 - 無效狀態",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 更新訂單狀態 - 無效狀態測試",
+                  "console.log('=== 測試：更新訂單狀態 - 無效狀態 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 驗證400回應",
+                  "TestUtils.validateStatusCode(400, '無效狀態應返回400');",
+                  "TestUtils.validateResponseTime();",
+                  "",
+                  "TestUtils.logTestResult('更新訂單狀態-無效狀態', pm.response.code === 400,",
+                  "    '使用無效狀態值時正確返回400錯誤');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders/{{testOrderId}}/status?newStatus=invalid_status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders", "{{testOrderId}}", "status"],
+              "query": [
+                {
+                  "key": "newStatus",
+                  "value": "invalid_status",
+                  "description": "無效的訂單狀態"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.3 更新訂單狀態 - 不存在的訂單",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 更新訂單狀態 - 不存在的訂單測試",
+                  "console.log('=== 測試：更新訂單狀態 - 不存在的訂單 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 驗證404回應",
+                  "TestUtils.validateStatusCode(404, '不存在的訂單應返回404');",
+                  "TestUtils.validateResponseTime();",
+                  "",
+                  "TestUtils.logTestResult('更新訂單狀態-不存在訂單', pm.response.code === 404,",
+                  "    '更新不存在訂單的狀態時正確返回404');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders/999999/status?newStatus=cancelled&reason=測試不存在訂單",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders", "999999", "status"],
+              "query": [
+                {
+                  "key": "newStatus",
+                  "value": "cancelled",
+                  "description": "取消狀態"
+                },
+                {
+                  "key": "reason",
+                  "value": "測試不存在訂單",
+                  "description": "測試原因"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.4 更新訂單狀態 - 狀態轉換測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 更新訂單狀態 - 狀態轉換測試",
+                  "console.log('=== 測試：更新訂單狀態 - 狀態轉換測試 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 基本驗證（可能成功或失敗，取決於業務邏輯）",
+                  "if (pm.response.code === 200) {",
+                  "    TestUtils.validateStatusCode(200, '有效狀態轉換');",
+                  "    TestUtils.validateJsonResponse();",
+                  "    ",
+                  "    const responseJson = pm.response.json();",
+                  "    TestUtils.validateOrderResponse(responseJson);",
+                  "    ",
+                  "    pm.test('狀態轉換成功驗證', function() {",
+                  "        pm.expect(responseJson.status).to.equal('completed');",
+                  "    });",
+                  "    ",
+                  "    TestUtils.logTestResult('更新訂單狀態-狀態轉換', true, '狀態轉換成功');",
+                  "} else if (pm.response.code === 400) {",
+                  "    TestUtils.validateStatusCode(400, '無效狀態轉換');",
+                  "    ",
+                  "    // 檢查錯誤訊息",
+                  "    if (pm.response.headers.get('Content-Type').includes('application/json')) {",
+                  "        const errorJson = pm.response.json();",
+                  "        TestUtils.validateErrorResponse(errorJson);",
+                  "    }",
+                  "    ",
+                  "    TestUtils.logTestResult('更新訂單狀態-狀態轉換', false, '無效狀態轉換被正確拒絕');",
+                  "} else {",
+                  "    pm.test('未預期的回應狀態碼', function() {",
+                  "        pm.expect.fail(`未預期的狀態碼: ${pm.response.code}`);",
+                  "    });",
+                  "    TestUtils.logTestResult('更新訂單狀態-狀態轉換', false, `未預期狀態碼: ${pm.response.code}`);",
+                  "}",
+                  "",
+                  "TestUtils.validateResponseTime();"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders/{{testOrderId}}/status?newStatus=completed&reason=測試狀態轉換",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders", "{{testOrderId}}", "status"],
+              "query": [
+                {
+                  "key": "newStatus",
+                  "value": "completed",
+                  "description": "完成狀態"
+                },
+                {
+                  "key": "reason",
+                  "value": "測試狀態轉換",
+                  "description": "測試狀態轉換邏輯"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. 邊界條件測試",
+      "item": [
+        {
+          "name": "4.1 分頁邊界測試 - 超大頁碼",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 分頁邊界測試 - 超大頁碼",
+                  "console.log('=== 測試：分頁邊界測試 - 超大頁碼 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 基本驗證",
+                  "TestUtils.validateStatusCode(200, '超大頁碼查詢');",
+                  "TestUtils.validateResponseTime();",
+                  "TestUtils.validateJsonResponse();",
+                  "",
+                  "// 解析回應",
+                  "const responseJson = pm.response.json();",
+                  "",
+                  "// 驗證空結果",
+                  "pm.test('超大頁碼應返回空結果', function() {",
+                  "    pm.expect(responseJson.content).to.be.an('array');",
+                  "    pm.expect(responseJson.content).to.be.empty;",
+                  "    pm.expect(responseJson.number).to.equal(9999);",
+                  "});",
+                  "",
+                  "TestUtils.logTestResult('分頁邊界測試-超大頁碼', pm.response.code === 200,",
+                  "    '超大頁碼正確返回空結果');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders?page=9999&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "9999",
+                  "description": "超大頁碼"
+                },
+                {
+                  "key": "size",
+                  "value": "10",
+                  "description": "正常頁面大小"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.2 分頁邊界測試 - 超大頁面大小",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 分頁邊界測試 - 超大頁面大小",
+                  "console.log('=== 測試：分頁邊界測試 - 超大頁面大小 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 可能返回400（參數錯誤）或200（限制頁面大小）",
+                  "if (pm.response.code === 400) {",
+                  "    TestUtils.validateStatusCode(400, '超大頁面大小被拒絕');",
+                  "    TestUtils.logTestResult('分頁邊界測試-超大頁面大小', true, '超大頁面大小被正確拒絕');",
+                  "} else if (pm.response.code === 200) {",
+                  "    TestUtils.validateStatusCode(200, '超大頁面大小被限制');",
+                  "    TestUtils.validateJsonResponse();",
+                  "    ",
+                  "    const responseJson = pm.response.json();",
+                  "    TestUtils.validatePageResponse(responseJson);",
+                  "    ",
+                  "    pm.test('頁面大小應被限制', function() {",
+                  "        pm.expect(responseJson.size).to.be.at.most(1000); // 假設最大限制為1000",
+                  "    });",
+                  "    ",
+                  "    TestUtils.logTestResult('分頁邊界測試-超大頁面大小', true, ",
+                  "        `頁面大小被限制為: ${responseJson.size}`);",
+                  "} else {",
+                  "    pm.test('未預期的回應狀態碼', function() {",
+                  "        pm.expect.fail(`未預期的狀態碼: ${pm.response.code}`);",
+                  "    });",
+                  "}",
+                  "",
+                  "TestUtils.validateResponseTime();"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders?page=0&size=10000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "第一頁"
+                },
+                {
+                  "key": "size",
+                  "value": "10000",
+                  "description": "超大頁面大小"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.3 分頁邊界測試 - 負數參數",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 分頁邊界測試 - 負數參數",
+                  "console.log('=== 測試：分頁邊界測試 - 負數參數 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 驗證400回應",
+                  "TestUtils.validateStatusCode(400, '負數參數應返回400');",
+                  "TestUtils.validateResponseTime();",
+                  "",
+                  "TestUtils.logTestResult('分頁邊界測試-負數參數', pm.response.code === 400,",
+                  "    '負數分頁參數被正確拒絕');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders?page=-1&size=-5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "-1",
+                  "description": "負數頁碼"
+                },
+                {
+                  "key": "size",
+                  "value": "-5",
+                  "description": "負數頁面大小"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. 安全性測試",
+      "item": [
+        {
+          "name": "5.1 SQL注入測試 - 訂單ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// SQL注入測試 - 訂單ID",
+                  "console.log('=== 測試：SQL注入測試 - 訂單ID ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 應該返回400（參數錯誤）或404（未找到）",
+                  "pm.test('SQL注入攻擊應被阻止', function() {",
+                  "    pm.expect([400, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "TestUtils.validateResponseTime();",
+                  "",
+                  "TestUtils.logTestResult('SQL注入測試-訂單ID', [400, 404].includes(pm.response.code),",
+                  "    'SQL注入攻擊被正確阻止');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders/1' OR '1'='1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders", "1' OR '1'='1"]
+            }
+          }
+        },
+        {
+          "name": "5.2 XSS測試 - 狀態更新原因",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// XSS測試 - 狀態更新原因",
+                  "console.log('=== 測試：XSS測試 - 狀態更新原因 ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 可能返回400（參數錯誤）、404（未找到）或200（正常處理但過濾XSS）",
+                  "pm.test('XSS攻擊應被處理', function() {",
+                  "    pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    TestUtils.validateJsonResponse();",
+                  "    const responseJson = pm.response.json();",
+                  "    ",
+                  "    pm.test('回應不應包含腳本標籤', function() {",
+                  "        const responseText = JSON.stringify(responseJson);",
+                  "        pm.expect(responseText).to.not.include('<script>');",
+                  "        pm.expect(responseText).to.not.include('alert(');",
+                  "    });",
+                  "}",
+                  "",
+                  "TestUtils.validateResponseTime();",
+                  "",
+                  "TestUtils.logTestResult('XSS測試-狀態更新原因', true, 'XSS攻擊被正確處理');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders/{{testOrderId}}/status?newStatus=cancelled&reason=<script>alert('XSS')</script>",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders", "{{testOrderId}}", "status"],
+              "query": [
+                {
+                  "key": "newStatus",
+                  "value": "cancelled",
+                  "description": "取消狀態"
+                },
+                {
+                  "key": "reason",
+                  "value": "<script>alert('XSS')</script>",
+                  "description": "包含XSS攻擊的原因"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.3 權限提升測試 - 普通用戶Token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 模擬使用普通用戶Token（如果有的話）",
+                  "if (pm.environment.get('userToken')) {",
+                  "    pm.request.headers.upsert({",
+                  "        key: 'Authorization',",
+                  "        value: 'Bearer ' + pm.environment.get('userToken')",
+                  "    });",
+                  "} else {",
+                  "    // 使用無效Token模擬",
+                  "    pm.request.headers.upsert({",
+                  "        key: 'Authorization',",
+                  "        value: 'Bearer invalid-user-token'",
+                  "    });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 權限提升測試 - 普通用戶Token",
+                  "console.log('=== 測試：權限提升測試 - 普通用戶Token ===');",
+                  "",
+                  "const TestUtils = JSON.parse(pm.globals.get('TestUtils'));",
+                  "",
+                  "// 應該返回401（未授權）或403（禁止訪問）",
+                  "pm.test('普通用戶應無法訪問管理員功能', function() {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "TestUtils.validateResponseTime();",
+                  "",
+                  "TestUtils.logTestResult('權限提升測試-普通用戶Token', [401, 403].includes(pm.response.code),",
+                  "    '普通用戶權限提升攻擊被正確阻止');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. 清理測試資料",
+      "item": [
+        {
+          "name": "6.1 重置測試環境變數",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 重置測試環境變數",
+                  "console.log('=== 清理：重置測試環境變數 ===');",
+                  "",
+                  "// 清理測試過程中設置的環境變數",
+                  "const testVarsToClean = [",
+                  "    'currentOrderStatus',",
+                  "    'currentOrderBase62',",
+                  "    'updatedOrderStatus'",
+                  "    // 保留 testOrderId 和 testOrderBase62 供其他測試使用",
+                  "];",
+                  "",
+                  "testVarsToClean.forEach(varName => {",
+                  "    pm.environment.unset(varName);",
+                  "    console.log(`已清理環境變數: ${varName}`);",
+                  "});",
+                  "",
+                  "pm.test('測試環境變數清理完成', function() {",
+                  "    pm.expect(true).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('=== P1-AdminOrder-Controller 測試完成 ===');",
+                  "console.log('測試摘要：');",
+                  "console.log('- 訂單查詢管理：3個測試案例');",
+                  "console.log('- 訂單詳情查詢：3個測試案例');",
+                  "console.log('- 訂單狀態管理：4個測試案例');",
+                  "console.log('- 邊界條件測試：3個測試案例');",
+                  "console.log('- 安全性測試：3個測試案例');",
+                  "console.log('- 總計：16個測試案例');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/orders?page=0&size=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "簡單查詢以完成清理"
+                },
+                {
+                  "key": "size",
+                  "value": "1",
+                  "description": "最小頁面大小"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

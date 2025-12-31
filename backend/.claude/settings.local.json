@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(powershell:*)",
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(newman --version)",
+      "Bash(newman run:*)",
+      "Bash(curl:*)",
+      "Bash(mvn:*)",
+      "Bash(tasklist)",
+      "Bash(taskkill:*)"
+    ],
+    "deny": []
+  }
+}

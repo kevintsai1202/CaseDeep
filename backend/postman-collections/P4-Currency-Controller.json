@@ -1,0 +1,869 @@
+{
+  "info": {
+    "name": "P4-Currency-Controller",
+    "description": "CurrencyController API測試集合 - 貨幣管理功能測試\n\n測試範圍：\n- 貨幣列表查詢功能\n- 貨幣詳情查詢功能\n- 貨幣創建功能\n- 貨幣更新功能\n- 貨幣刪除功能\n- 貨幣代碼搜尋功能\n- 管理員權限驗證\n- 錯誤處理測試\n- 數據驗證測試\n\n基礎路徑：/api/admin/currencies\n權限要求：管理員權限\nEntity：Currency (id, currency, currencySymbol)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "{{baseUrl}}",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "{{adminToken}}",
+      "type": "string"
+    },
+    {
+      "key": "userToken",
+      "value": "{{userToken}}",
+      "type": "string"
+    },
+    {
+      "key": "currencyId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testCurrencyCode",
+      "value": "TEST",
+      "type": "string"
+    },
+    {
+      "key": "testCurrencySymbol",
+      "value": "T$",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "貨幣管理功能測試",
+      "item": [
+        {
+          "name": "獲取所有貨幣列表",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Response contains currency objects with required fields', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.length > 0) {",
+                  "        const currency = responseJson[0];",
+                  "        pm.expect(currency).to.have.property('id');",
+                  "        pm.expect(currency).to.have.property('currency');",
+                  "        pm.expect(currency).to.have.property('currencySymbol');",
+                  "        pm.expect(currency.id).to.be.a('number');",
+                  "        pm.expect(currency.currency).to.be.a('string');",
+                  "        pm.expect(currency.currencySymbol).to.be.a('string');",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies"]
+            }
+          }
+        },
+        {
+          "name": "創建新貨幣",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains created currency data', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('id');",
+                  "    pm.expect(responseJson).to.have.property('currency');",
+                  "    pm.expect(responseJson).to.have.property('currencySymbol');",
+                  "    pm.expect(responseJson.currency).to.equal(pm.collectionVariables.get('testCurrencyCode'));",
+                  "    pm.expect(responseJson.currencySymbol).to.equal(pm.collectionVariables.get('testCurrencySymbol'));",
+                  "});",
+                  "",
+                  "pm.test('Set currencyId for subsequent tests', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.collectionVariables.set('currencyId', responseJson.id);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 3000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"{{testCurrencyCode}}\",\n  \"currencySymbol\": \"{{testCurrencySymbol}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies"]
+            }
+          }
+        },
+        {
+          "name": "根據ID獲取貨幣詳情",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains currency details', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('id');",
+                  "    pm.expect(responseJson).to.have.property('currency');",
+                  "    pm.expect(responseJson).to.have.property('currencySymbol');",
+                  "    pm.expect(responseJson.id).to.equal(parseInt(pm.collectionVariables.get('currencyId')));",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies/{{currencyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies", "{{currencyId}}"]
+            }
+          }
+        },
+        {
+          "name": "更新貨幣資訊",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains updated currency data', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('id');",
+                  "    pm.expect(responseJson).to.have.property('currency');",
+                  "    pm.expect(responseJson).to.have.property('currencySymbol');",
+                  "    pm.expect(responseJson.currency).to.equal('UPDT');",
+                  "    pm.expect(responseJson.currencySymbol).to.equal('U$');",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 3000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"UPDT\",\n  \"currencySymbol\": \"U$\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies/{{currencyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies", "{{currencyId}}"]
+            }
+          }
+        },
+        {
+          "name": "根據貨幣代碼搜尋",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains currency data', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('id');",
+                  "    pm.expect(responseJson).to.have.property('currency');",
+                  "    pm.expect(responseJson).to.have.property('currencySymbol');",
+                  "    pm.expect(responseJson.currency).to.equal('UPDT');",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies/search/UPDT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies", "search", "UPDT"]
+            }
+          }
+        },
+        {
+          "name": "刪除貨幣",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 204', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "",
+                  "pm.test('Response body is empty', function () {",
+                  "    pm.expect(pm.response.text()).to.be.empty;",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 3000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies/{{currencyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies", "{{currencyId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "權限與安全測試",
+      "item": [
+        {
+          "name": "無Token訪問測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 or 403', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies"]
+            }
+          }
+        },
+        {
+          "name": "一般用戶權限測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies"]
+            }
+          }
+        },
+        {
+          "name": "無效Token測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid_token_here",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "錯誤處理與邊界測試",
+      "item": [
+        {
+          "name": "創建貨幣 - 空白代碼測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"\",\n  \"currencySymbol\": \"$\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies"]
+            }
+          }
+        },
+        {
+          "name": "創建貨幣 - 空白符號測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"USD\",\n  \"currencySymbol\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies"]
+            }
+          }
+        },
+        {
+          "name": "創建貨幣 - 超長代碼測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"VERYLONGCURRENCYCODE\",\n  \"currencySymbol\": \"$\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies"]
+            }
+          }
+        },
+        {
+          "name": "創建貨幣 - 超長符號測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"USD\",\n  \"currencySymbol\": \"VeryLongSymbol\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies"]
+            }
+          }
+        },
+        {
+          "name": "獲取不存在的貨幣",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies", "99999"]
+            }
+          }
+        },
+        {
+          "name": "更新不存在的貨幣",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"USD\",\n  \"currencySymbol\": \"$\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies", "99999"]
+            }
+          }
+        },
+        {
+          "name": "刪除不存在的貨幣",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies", "99999"]
+            }
+          }
+        },
+        {
+          "name": "搜尋不存在的貨幣代碼",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies/search/NONEXIST",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies", "search", "NONEXIST"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "性能與負載測試",
+      "item": [
+        {
+          "name": "貨幣列表查詢性能測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 1000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                  "});",
+                  "",
+                  "pm.test('Response size is reasonable', function () {",
+                  "    pm.expect(pm.response.responseSize).to.be.below(1000000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/currencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "currencies"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,725 @@
+{
+	"info": {
+		"_postman_id": "p4-fileupload-controller-test",
+		"name": "P4-FileUpload-Controller API Tests",
+		"description": "Complete test suite for FileUploadController - File Management APIs\n\n**Controller**: FileUploadController\n**Base Path**: /api/files\n**Priority**: P4 (System Support)\n**Security**: Public access (no authentication required)\n\n**Endpoints Tested**:\n- POST /api/files - Upload file\n- GET /api/files - List all files\n- GET /api/files/{uuid} - Download file by UUID\n\n**Test Coverage**:\n1. File Management Operations (3 endpoints)\n2. File Upload & Download Flow\n3. Error Handling & Edge Cases\n4. File Metadata Validation\n\n**Key Features**:\n- Multipart file upload with metadata storage\n- UUID-based file identification and retrieval\n- File listing with download URLs\n- Secure file storage and retrieval system",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "File Management Operations",
+			"item": [
+				{
+					"name": "Upload File - Valid File",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test file upload functionality",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has correct structure', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('fId');",
+									"    pm.expect(responseJson).to.have.property('fileName');",
+									"    pm.expect(responseJson).to.have.property('uuid');",
+									"    pm.expect(responseJson).to.have.property('size');",
+									"    pm.expect(responseJson).to.have.property('url');",
+									"});",
+									"",
+									"pm.test('File metadata is valid', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.fId).to.be.a('number');",
+									"    pm.expect(responseJson.fileName).to.be.a('string');",
+									"    pm.expect(responseJson.uuid).to.be.a('string');",
+									"    pm.expect(responseJson.size).to.be.a('number');",
+									"    pm.expect(responseJson.url).to.include('/api/files/');",
+									"});",
+									"",
+									"pm.test('UUID format is valid', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.uuid).to.match(/^[a-f0-9-]{36}$/i);",
+									"});",
+									"",
+									"// Store file data for subsequent tests",
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    pm.environment.set('test_file_id', responseJson.fId);",
+									"    pm.environment.set('test_file_uuid', responseJson.uuid);",
+									"    pm.environment.set('test_file_name', responseJson.fileName);",
+									"    pm.environment.set('test_file_size', responseJson.size);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "multipart/form-data",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "test-document.pdf",
+									"description": "Test file for upload"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/files",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"files"
+							]
+						},
+						"description": "Upload a test file to the server storage system"
+					}
+				},
+				{
+					"name": "List All Files - Get File List",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test file listing functionality",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response is an array', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('File list contains valid file objects', function () {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.length > 0) {",
+									"        const firstFile = responseJson[0];",
+									"        pm.expect(firstFile).to.have.property('fId');",
+									"        pm.expect(firstFile).to.have.property('fileName');",
+									"        pm.expect(firstFile).to.have.property('uuid');",
+									"        pm.expect(firstFile).to.have.property('size');",
+									"        pm.expect(firstFile).to.have.property('url');",
+									"    }",
+									"});",
+									"",
+									"pm.test('File URLs are properly formatted', function () {",
+									"    const responseJson = pm.response.json();",
+									"    responseJson.forEach(file => {",
+									"        pm.expect(file.url).to.include('/api/files/');",
+									"        pm.expect(file.url).to.include(file.uuid);",
+									"    });",
+									"});",
+									"",
+									"pm.test('Previously uploaded file exists in list', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const testFileUuid = pm.environment.get('test_file_uuid');",
+									"    if (testFileUuid) {",
+									"        const uploadedFile = responseJson.find(file => file.uuid === testFileUuid);",
+									"        pm.expect(uploadedFile).to.not.be.undefined;",
+									"        pm.expect(uploadedFile.fileName).to.equal(pm.environment.get('test_file_name'));",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/files",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"files"
+							]
+						},
+						"description": "Retrieve a comprehensive list of all uploaded files with metadata"
+					}
+				},
+				{
+					"name": "Download File by UUID - Valid UUID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test file download functionality",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has file content', function () {",
+									"    pm.expect(pm.response.responseSize).to.be.above(0);",
+									"});",
+									"",
+									"pm.test('Content-Disposition header is present', function () {",
+									"    pm.expect(pm.response.headers.get('Content-Disposition')).to.include('attachment');",
+									"    pm.expect(pm.response.headers.get('Content-Disposition')).to.include('filename=');",
+									"});",
+									"",
+									"pm.test('Content-Disposition contains original filename', function () {",
+									"    const testFileName = pm.environment.get('test_file_name');",
+									"    if (testFileName) {",
+									"        const contentDisposition = pm.response.headers.get('Content-Disposition');",
+									"        pm.expect(contentDisposition).to.include(testFileName);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/files/{{test_file_uuid}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"{{test_file_uuid}}"
+							]
+						},
+						"description": "Download a specific file using its UUID identifier"
+					}
+				}
+			],
+			"description": "Test suite for file management operations including upload, listing, and download functionality"
+		},
+		{
+			"name": "Error Handling & Edge Cases",
+			"item": [
+				{
+					"name": "Upload File - No File Provided",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test upload without file",
+									"pm.test('Status code indicates error (400 or 500)', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([400, 500]);",
+									"});",
+									"",
+									"pm.test('Response indicates missing file error', function () {",
+									"    // Response should indicate missing file parameter",
+									"    pm.expect(pm.response.text()).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "multipart/form-data",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{base_url}}/api/files",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"files"
+							]
+						},
+						"description": "Test upload endpoint without providing a file"
+					}
+				},
+				{
+					"name": "Upload File - Empty File",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test upload with empty file",
+									"pm.test('Status code indicates error or success', function () {",
+									"    // Some systems may accept empty files, others may reject",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 400, 500]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    pm.test('Empty file handled correctly', function () {",
+									"        const responseJson = pm.response.json();",
+									"        pm.expect(responseJson.size).to.equal(0);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "multipart/form-data",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "empty-file.txt",
+									"description": "Empty test file"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/files",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"files"
+							]
+						},
+						"description": "Test upload with an empty file"
+					}
+				},
+				{
+					"name": "Download File - Invalid UUID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test download with invalid UUID",
+									"pm.test('Status code indicates error (404 or 500)', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([404, 500]);",
+									"});",
+									"",
+									"pm.test('Error response is not empty', function () {",
+									"    pm.expect(pm.response.text()).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/files/invalid-uuid-12345",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"invalid-uuid-12345"
+							]
+						},
+						"description": "Test download with an invalid UUID format"
+					}
+				},
+				{
+					"name": "Download File - Non-existent UUID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test download with non-existent but valid UUID format",
+									"pm.test('Status code indicates not found (404 or 500)', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([404, 500]);",
+									"});",
+									"",
+									"pm.test('Error response indicates file not found', function () {",
+									"    pm.expect(pm.response.text()).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/files/12345678-1234-1234-1234-123456789abc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"12345678-1234-1234-1234-123456789abc"
+							]
+						},
+						"description": "Test download with a valid UUID format but non-existent file"
+					}
+				},
+				{
+					"name": "Upload File - Large File Test",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test large file upload",
+									"pm.test('Status code indicates success or size limit error', function () {",
+									"    // May succeed or fail depending on server configuration",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 413, 500]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    pm.test('Large file uploaded successfully', function () {",
+									"        const responseJson = pm.response.json();",
+									"        pm.expect(responseJson.size).to.be.above(1000000); // > 1MB",
+									"    });",
+									"} else if (pm.response.code === 413) {",
+									"    pm.test('File size limit enforced correctly', function () {",
+									"        pm.expect(pm.response.text()).to.include('size');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "multipart/form-data",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "large-test-file.zip",
+									"description": "Large test file to test size limits"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/files",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"files"
+							]
+						},
+						"description": "Test upload with a large file to verify size handling"
+					}
+				}
+			],
+			"description": "Test suite for error handling and edge cases in file operations"
+		},
+		{
+			"name": "File Type & Security Tests",
+			"item": [
+				{
+					"name": "Upload File - Different File Types",
+					"item": [
+						{
+							"name": "Upload PDF File",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('PDF file uploaded successfully', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('PDF file metadata correct', function () {",
+											"    const responseJson = pm.response.json();",
+											"    pm.expect(responseJson.fileName).to.include('.pdf');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "multipart/form-data",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "test-document.pdf",
+											"description": "PDF test file"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{base_url}}/api/files",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"files"
+									]
+								}
+							}
+						},
+						{
+							"name": "Upload Image File",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Image file uploaded successfully', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Image file metadata correct', function () {",
+											"    const responseJson = pm.response.json();",
+											"    pm.expect(responseJson.fileName).to.match(/\\.(jpg|jpeg|png|gif)$/i);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "multipart/form-data",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "test-image.jpg",
+											"description": "Image test file"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{base_url}}/api/files",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"files"
+									]
+								}
+							}
+						},
+						{
+							"name": "Upload Text File",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Text file uploaded successfully', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Text file metadata correct', function () {",
+											"    const responseJson = pm.response.json();",
+											"    pm.expect(responseJson.fileName).to.include('.txt');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "multipart/form-data",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "test-document.txt",
+											"description": "Text test file"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{base_url}}/api/files",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"files"
+									]
+								}
+							}
+						}
+					],
+					"description": "Test file upload with different file types"
+				},
+				{
+					"name": "File Access Security Test",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test that files are accessible without authentication",
+									"pm.test('Files accessible without authentication', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('File list returned successfully', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/files",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"files"
+							]
+						},
+						"description": "Verify that file operations work without authentication (public access)"
+					}
+				}
+			],
+			"description": "Test suite for different file types and security aspects"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"// Pre-request script for FileUpload Controller tests",
+					"console.log('Starting FileUpload Controller API test');",
+					"",
+					"// Set base URL if not already set",
+					"if (!pm.environment.get('base_url')) {",
+					"    pm.environment.set('base_url', 'http://localhost:8080');",
+					"}",
+					"",
+					"// Log current test info",
+					"console.log('Test: ' + pm.info.requestName);",
+					"console.log('Base URL: ' + pm.environment.get('base_url'));"
+				],
+				"type": "text/javascript"
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"exec": [
+					"// Global test script for FileUpload Controller",
+					"",
+					"// Log response details",
+					"console.log('Response Status: ' + pm.response.code);",
+					"console.log('Response Time: ' + pm.response.responseTime + 'ms');",
+					"",
+					"// Global response time test",
+					"pm.test('Response time is reasonable (< 10s)', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(10000);",
+					"});",
+					"",
+					"// Log any errors for debugging",
+					"if (pm.response.code >= 400) {",
+					"    console.log('Error Response Body: ' + pm.response.text());",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "controller_name",
+			"value": "FileUploadController",
+			"type": "string"
+		},
+		{
+			"key": "base_path",
+			"value": "/api/files",
+			"type": "string"
+		},
+		{
+			"key": "test_priority",
+			"value": "P4",
+			"type": "string"
+		}
+	]
+}

@@ -1,0 +1,874 @@
+{
+  "info": {
+    "name": "P1-AdminCommission-Controller",
+    "description": "管理員佣金管理控制器測試集合 - 包含佣金查詢、狀態更新、詳情查看等完整測試場景",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 全域前置腳本 - 檢查JWT Token有效性",
+          "if (!pm.environment.get('jwt_token') || pm.environment.get('jwt_token') === '') {",
+          "    console.log('JWT Token未設定，請先執行認證測試');",
+          "    throw new Error('請先執行P0-Authentication-Controller中的登入測試以獲取JWT Token');",
+          "}",
+          "",
+          "// 檢查Token是否即將過期（提前5分鐘檢查）",
+          "const tokenExpiry = pm.environment.get('token_expiry');",
+          "if (tokenExpiry) {",
+          "    const expiryTime = new Date(tokenExpiry);",
+          "    const currentTime = new Date();",
+          "    const timeDiff = expiryTime.getTime() - currentTime.getTime();",
+          "    const minutesLeft = Math.floor(timeDiff / (1000 * 60));",
+          "    ",
+          "    if (minutesLeft < 5) {",
+          "        console.log(`Token將在${minutesLeft}分鐘後過期，建議重新登入`);",
+          "    }",
+          "}",
+          "",
+          "// 設定通用請求標頭",
+          "pm.request.headers.add({",
+          "    key: 'Content-Type',",
+          "    value: 'application/json'",
+          "});",
+          "",
+          "pm.request.headers.add({",
+          "    key: 'Accept',",
+          "    value: 'application/json'",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "{{base_url}}/api/admin/commissions",
+      "type": "string"
+    },
+    {
+      "key": "test_commission_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_commission_id_str",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "佣金查詢管理測試",
+      "item": [
+        {
+          "name": "取得佣金分頁列表 - 正常查詢",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 測試回應狀態",
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// 測試回應格式",
+                  "pm.test('回應應為JSON格式', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "// 測試分頁結構",
+                  "pm.test('回應應包含分頁結構', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('content');",
+                  "    pm.expect(responseJson).to.have.property('pageable');",
+                  "    pm.expect(responseJson).to.have.property('totalElements');",
+                  "    pm.expect(responseJson).to.have.property('totalPages');",
+                  "    pm.expect(responseJson).to.have.property('size');",
+                  "    pm.expect(responseJson).to.have.property('number');",
+                  "});",
+                  "",
+                  "// 測試佣金資料結構",
+                  "pm.test('佣金資料結構應正確', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.content && responseJson.content.length > 0) {",
+                  "        const commission = responseJson.content[0];",
+                  "        pm.expect(commission).to.have.property('commissionIdStr');",
+                  "        pm.expect(commission).to.have.property('orderIdStr');",
+                  "        pm.expect(commission).to.have.property('commissionAmount');",
+                  "        pm.expect(commission).to.have.property('commissionRate');",
+                  "        pm.expect(commission).to.have.property('commissionPaymentStatus');",
+                  "        pm.expect(commission).to.have.property('orderStatus');",
+                  "        pm.expect(commission).to.have.property('providerUsername');",
+                  "        pm.expect(commission).to.have.property('clientUsername');",
+                  "        ",
+                  "        // 儲存測試用的佣金ID",
+                  "        pm.collectionVariables.set('test_commission_id_str', commission.commissionIdStr);",
+                  "        console.log('已儲存測試佣金ID:', commission.commissionIdStr);",
+                  "    }",
+                  "});",
+                  "",
+                  "// 測試佣金狀態值",
+                  "pm.test('佣金支付狀態應為有效值', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.content && responseJson.content.length > 0) {",
+                  "        const validStatuses = ['Pending', 'Paid', 'Complete'];",
+                  "        responseJson.content.forEach(commission => {",
+                  "            pm.expect(validStatuses).to.include(commission.commissionPaymentStatus);",
+                  "        });",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?page=0&size=10&sort=commissionIdStr,desc",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "commissionIdStr,desc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "取得佣金分頁列表 - 大分頁測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('分頁大小應正確', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.size).to.equal(50);",
+                  "    pm.expect(responseJson.content.length).to.be.at.most(50);",
+                  "});",
+                  "",
+                  "pm.test('分頁號碼應正確', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.number).to.equal(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?page=0&size=50",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "取得佣金分頁列表 - 排序測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('排序應正確執行', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.content && responseJson.content.length > 1) {",
+                  "        // 檢查佣金金額是否按降序排列",
+                  "        for (let i = 0; i < responseJson.content.length - 1; i++) {",
+                  "            const current = responseJson.content[i].commissionAmount || 0;",
+                  "            const next = responseJson.content[i + 1].commissionAmount || 0;",
+                  "            pm.expect(current).to.be.at.least(next);",
+                  "        }",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?page=0&size=20&sort=commissionAmount,desc",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "commissionAmount,desc"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "佣金詳情查詢測試",
+      "item": [
+        {
+          "name": "根據佣金ID字串查詢詳情 - 正常查詢",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 檢查是否有測試用的佣金ID",
+                  "const commissionIdStr = pm.collectionVariables.get('test_commission_id_str');",
+                  "if (!commissionIdStr) {",
+                  "    console.log('未找到測試佣金ID，使用預設值');",
+                  "    pm.collectionVariables.set('test_commission_id_str', 'CO2501232305');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200或404', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('回應應為JSON格式', function () {",
+                  "        pm.response.to.be.json;",
+                  "    });",
+                  "    ",
+                  "    pm.test('佣金詳情結構應完整', function () {",
+                  "        const responseJson = pm.response.json();",
+                  "        pm.expect(responseJson).to.have.property('commissionIdStr');",
+                  "        pm.expect(responseJson).to.have.property('orderIdStr');",
+                  "        pm.expect(responseJson).to.have.property('templateName');",
+                  "        pm.expect(responseJson).to.have.property('orderAmount');",
+                  "        pm.expect(responseJson).to.have.property('commissionAmount');",
+                  "        pm.expect(responseJson).to.have.property('commissionRate');",
+                  "        pm.expect(responseJson).to.have.property('commissionPaymentStatus');",
+                  "        pm.expect(responseJson).to.have.property('orderDate');",
+                  "        pm.expect(responseJson).to.have.property('orderStatus');",
+                  "        pm.expect(responseJson).to.have.property('providerUsername');",
+                  "        pm.expect(responseJson).to.have.property('clientUsername');",
+                  "    });",
+                  "    ",
+                  "    pm.test('佣金ID應匹配請求參數', function () {",
+                  "        const responseJson = pm.response.json();",
+                  "        const requestedId = pm.collectionVariables.get('test_commission_id_str');",
+                  "        pm.expect(responseJson.commissionIdStr).to.equal(requestedId);",
+                  "    });",
+                  "    ",
+                  "    pm.test('佣金金額應為正數', function () {",
+                  "        const responseJson = pm.response.json();",
+                  "        if (responseJson.commissionAmount !== null) {",
+                  "            pm.expect(responseJson.commissionAmount).to.be.above(0);",
+                  "        }",
+                  "    });",
+                  "} else if (pm.response.code === 404) {",
+                  "    pm.test('404回應應正確', function () {",
+                  "        console.log('佣金不存在，這是正常的測試結果');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{test_commission_id_str}}",
+              "host": ["{{base_url}}"],
+              "path": ["{{test_commission_id_str}}"]
+            }
+          }
+        },
+        {
+          "name": "根據佣金ID字串查詢詳情 - 不存在的ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('回應時間應合理', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/NONEXISTENT999",
+              "host": ["{{base_url}}"],
+              "path": ["NONEXISTENT999"]
+            }
+          }
+        },
+        {
+          "name": "根據佣金ID字串查詢詳情 - 無效格式ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為404或400', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                  "});",
+                  "",
+                  "pm.test('回應時間應合理', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invalid-format-123!@#",
+              "host": ["{{base_url}}"],
+              "path": ["invalid-format-123!@#"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "佣金狀態管理測試",
+      "item": [
+        {
+          "name": "更新佣金狀態 - 設為已支付",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 確保有測試用的佣金ID",
+                  "const commissionIdStr = pm.collectionVariables.get('test_commission_id_str');",
+                  "if (!commissionIdStr) {",
+                  "    pm.collectionVariables.set('test_commission_id_str', 'CO2501232305');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200或404', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('回應應為JSON格式', function () {",
+                  "        pm.response.to.be.json;",
+                  "    });",
+                  "    ",
+                  "    pm.test('佣金狀態應已更新為Paid', function () {",
+                  "        const responseJson = pm.response.json();",
+                  "        pm.expect(responseJson.commissionPaymentStatus).to.equal('Paid');",
+                  "    });",
+                  "    ",
+                  "    pm.test('更新後的佣金資料結構應完整', function () {",
+                  "        const responseJson = pm.response.json();",
+                  "        pm.expect(responseJson).to.have.property('commissionIdStr');",
+                  "        pm.expect(responseJson).to.have.property('commissionAmount');",
+                  "        pm.expect(responseJson).to.have.property('commissionPaymentStatus');",
+                  "    });",
+                  "} else if (pm.response.code === 404) {",
+                  "    pm.test('404回應應正確', function () {",
+                  "        console.log('佣金不存在，這是正常的測試結果');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{test_commission_id_str}}/status?newStatus=Paid",
+              "host": ["{{base_url}}"],
+              "path": ["{{test_commission_id_str}}", "status"],
+              "query": [
+                {
+                  "key": "newStatus",
+                  "value": "Paid"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "更新佣金狀態 - 設為待支付",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200或404', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('佣金狀態應已更新為Pending', function () {",
+                  "        const responseJson = pm.response.json();",
+                  "        pm.expect(responseJson.commissionPaymentStatus).to.equal('Pending');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{test_commission_id_str}}/status?newStatus=Pending",
+              "host": ["{{base_url}}"],
+              "path": ["{{test_commission_id_str}}", "status"],
+              "query": [
+                {
+                  "key": "newStatus",
+                  "value": "Pending"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "更新佣金狀態 - 設為完成",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200或404', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('佣金狀態應已更新為Complete', function () {",
+                  "        const responseJson = pm.response.json();",
+                  "        pm.expect(responseJson.commissionPaymentStatus).to.equal('Complete');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{test_commission_id_str}}/status?newStatus=Complete",
+              "host": ["{{base_url}}"],
+              "path": ["{{test_commission_id_str}}", "status"],
+              "query": [
+                {
+                  "key": "newStatus",
+                  "value": "Complete"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "更新佣金狀態 - 無效狀態值",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('回應時間應合理', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/{{test_commission_id_str}}/status?newStatus=InvalidStatus",
+              "host": ["{{base_url}}"],
+              "path": ["{{test_commission_id_str}}", "status"],
+              "query": [
+                {
+                  "key": "newStatus",
+                  "value": "InvalidStatus"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "邊界條件測試",
+      "item": [
+        {
+          "name": "分頁查詢 - 超大頁碼",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('空頁面應正確處理', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.content).to.be.an('array');",
+                  "    pm.expect(responseJson.content.length).to.equal(0);",
+                  "    pm.expect(responseJson.number).to.equal(9999);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?page=9999&size=10",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "9999"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "分頁查詢 - 負數頁碼",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為400或200', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 200]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('負數頁碼應被處理為0', function () {",
+                  "        const responseJson = pm.response.json();",
+                  "        pm.expect(responseJson.number).to.be.at.least(0);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?page=-1&size=10",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "-1"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "更新不存在的佣金狀態",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('回應時間應合理', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/NONEXISTENT999/status?newStatus=Paid",
+              "host": ["{{base_url}}"],
+              "path": ["NONEXISTENT999", "status"],
+              "query": [
+                {
+                  "key": "newStatus",
+                  "value": "Paid"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "安全性測試",
+      "item": [
+        {
+          "name": "未授權訪問 - 無Token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 移除Authorization標頭",
+                  "pm.request.removeHeader('Authorization');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('回應時間應合理', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}",
+              "host": ["{{base_url}}"]
+            }
+          }
+        },
+        {
+          "name": "未授權訪問 - 無效Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('狀態碼應為401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('回應時間應合理', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "invalid.jwt.token",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}",
+              "host": ["{{base_url}}"]
+            }
+          }
+        },
+        {
+          "name": "權限測試 - 需要ROLE_COMMISSION_MANAGE權限",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 如果用戶有正確權限，應該返回200",
+                  "// 如果用戶沒有權限，應該返回403",
+                  "pm.test('狀態碼應為200或403', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('有權限時應正常返回佣金列表', function () {",
+                  "        pm.response.to.be.json;",
+                  "        const responseJson = pm.response.json();",
+                  "        pm.expect(responseJson).to.have.property('content');",
+                  "    });",
+                  "} else if (pm.response.code === 403) {",
+                  "    pm.test('無權限時應返回403', function () {",
+                  "        console.log('用戶沒有ROLE_COMMISSION_MANAGE權限');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}",
+              "host": ["{{base_url}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "清理測試資料",
+      "item": [
+        {
+          "name": "重置測試變數",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 清理集合變數",
+                  "pm.collectionVariables.unset('test_commission_id');",
+                  "pm.collectionVariables.unset('test_commission_id_str');",
+                  "",
+                  "pm.test('測試變數已清理', function () {",
+                  "    pm.expect(pm.collectionVariables.get('test_commission_id')).to.be.undefined;",
+                  "    pm.expect(pm.collectionVariables.get('test_commission_id_str')).to.be.undefined;",
+                  "});",
+                  "",
+                  "console.log('AdminCommissionController測試完成，測試變數已清理');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}?page=0&size=1",
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

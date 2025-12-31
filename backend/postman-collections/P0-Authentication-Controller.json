@@ -1,0 +1,981 @@
+{
+  "info": {
+    "name": "P0-Authentication-Controller",
+    "description": "Case Manager AI Chat - 認證控制器完整測試集合\n\n此集合包含AuthController的所有端點測試，涵蓋用戶認證、註冊、密碼管理等核心功能。\n\n**測試範圍:**\n- 用戶登入/登出\n- 用戶註冊\n- 忘記密碼/重設密碼\n- 郵件驗證\n- Token解析與驗證\n\n**執行順序:**\n1. 用戶註冊\n2. 郵件驗證\n3. 用戶登入\n4. Token相關操作\n5. 密碼管理功能",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 全局前置腳本 - 認證控制器",
+          "console.log('=== AuthController Pre-request Script ===');",
+          "",
+          "// 設置時間戳",
+          "pm.environment.set('timestamp', new Date().getTime());",
+          "pm.environment.set('isoTimestamp', new Date().toISOString());",
+          "",
+          "// 生成測試用隨機數據",
+          "const randomSuffix = Math.floor(Math.random() * 10000);",
+          "pm.environment.set('randomEmail', `test_${Date.now()}_${randomSuffix}@example.com`);",
+          "pm.environment.set('randomUsername', `testuser_${Date.now()}_${randomSuffix}`);",
+          "pm.environment.set('randomPassword', 'TestPass123!');",
+          "",
+          "// 檢查基礎URL",
+          "if (!pm.environment.get('baseUrl')) {",
+          "    pm.environment.set('baseUrl', 'http://localhost:8080');",
+          "}",
+          "",
+          "console.log('Random Email:', pm.environment.get('randomEmail'));",
+          "console.log('Base URL:', pm.environment.get('baseUrl'));"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 全局測試腳本 - 認證控制器",
+          "console.log('=== AuthController Global Test Script ===');",
+          "",
+          "// 通用響應驗證函數",
+          "function validateBasicResponse() {",
+          "    pm.test('響應時間應小於2秒', function () {",
+          "        pm.expect(pm.response.responseTime).to.be.below(2000);",
+          "    });",
+          "    ",
+          "    pm.test('Content-Type應為JSON', function () {",
+          "        pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "    });",
+          "}",
+          "",
+          "// 成功響應驗證",
+          "function validateSuccessResponse() {",
+          "    pm.test('狀態碼應為成功狀態', function () {",
+          "        pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+          "    });",
+          "    validateBasicResponse();",
+          "}",
+          "",
+          "// 錯誤響應驗證",
+          "function validateErrorResponse(expectedCode, expectedMessage) {",
+          "    pm.test(`狀態碼應為 ${expectedCode}`, function () {",
+          "        pm.response.to.have.status(expectedCode);",
+          "    });",
+          "    ",
+          "    if (expectedMessage) {",
+          "        pm.test('錯誤訊息應正確', function () {",
+          "            const jsonData = pm.response.json();",
+          "            pm.expect(jsonData.message || jsonData.error).to.include(expectedMessage);",
+          "        });",
+          "    }",
+          "    validateBasicResponse();",
+          "}",
+          "",
+          "// JWT Token驗證",
+          "function validateJWTToken(tokenField = 'token') {",
+          "    pm.test('JWT Token格式應正確', function () {",
+          "        const jsonData = pm.response.json();",
+          "        const token = jsonData[tokenField];",
+          "        pm.expect(token).to.be.a('string');",
+          "        ",
+          "        const parts = token.split('.');",
+          "        pm.expect(parts.length).to.equal(3);",
+          "        ",
+          "        // 解析JWT payload",
+          "        try {",
+          "            const payload = JSON.parse(atob(parts[1]));",
+          "            pm.expect(payload).to.have.property('sub');",
+          "            pm.expect(payload).to.have.property('exp');",
+          "            pm.expect(payload.exp).to.be.above(Date.now() / 1000);",
+          "        } catch (e) {",
+          "            pm.expect.fail('JWT Token解析失敗');",
+          "        }",
+          "    });",
+          "}",
+          "",
+          "// 將函數設為全局可用",
+          "pm.globals.set('validateBasicResponse', validateBasicResponse.toString());",
+          "pm.globals.set('validateSuccessResponse', validateSuccessResponse.toString());",
+          "pm.globals.set('validateErrorResponse', validateErrorResponse.toString());",
+          "pm.globals.set('validateJWTToken', validateJWTToken.toString());"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "verificationCode",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "用戶註冊測試",
+      "item": [
+        {
+          "name": "POST /api/auth/register - 正常註冊",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 執行通用成功響應驗證",
+                  "eval(pm.globals.get('validateSuccessResponse'))();",
+                  "",
+                  "pm.test('註冊響應結構應正確', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('success', true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "});",
+                  "",
+                  "pm.test('應返回用戶資訊', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const userData = jsonData.data;",
+                  "    pm.expect(userData).to.have.property('id');",
+                  "    pm.expect(userData).to.have.property('username');",
+                  "    pm.expect(userData).to.have.property('email');",
+                  "    pm.expect(userData).to.not.have.property('password');",
+                  "});",
+                  "",
+                  "// 保存用戶ID供後續測試使用",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.environment.set('testUserId', jsonData.data.id);",
+                  "        console.log('已保存測試用戶ID:', jsonData.data.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{randomUsername}}\",\n  \"email\": \"{{randomEmail}}\",\n  \"password\": \"{{randomPassword}}\",\n  \"userType\": \"CLIENT\",\n  \"firstName\": \"測試\",\n  \"lastName\": \"用戶\",\n  \"phone\": \"+886912345678\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "測試用戶正常註冊流程\n\n**測試重點:**\n- 驗證註冊請求參數\n- 檢查響應結構\n- 確認用戶資料正確性\n- 驗證密碼不會在響應中返回"
+          }
+        },
+        {
+          "name": "POST /api/auth/register - 重複郵箱註冊",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 執行錯誤響應驗證",
+                  "eval(pm.globals.get('validateErrorResponse'))(400, '郵箱已存在');",
+                  "",
+                  "pm.test('應返回重複郵箱錯誤', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.message).to.include('郵箱');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{randomUsername}}_duplicate\",\n  \"email\": \"{{randomEmail}}\",\n  \"password\": \"{{randomPassword}}\",\n  \"userType\": \"CLIENT\",\n  \"firstName\": \"重複\",\n  \"lastName\": \"用戶\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "測試重複郵箱註冊的錯誤處理\n\n**測試重點:**\n- 驗證重複郵箱檢查\n- 確認錯誤響應格式\n- 檢查錯誤訊息內容"
+          }
+        },
+        {
+          "name": "POST /api/auth/register - 無效參數",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 執行錯誤響應驗證",
+                  "eval(pm.globals.get('validateErrorResponse'))(400, '參數驗證失敗');",
+                  "",
+                  "pm.test('應返回參數驗證錯誤', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"\",\n  \"email\": \"invalid-email\",\n  \"password\": \"123\",\n  \"userType\": \"INVALID_TYPE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "測試無效參數的錯誤處理\n\n**測試重點:**\n- 驗證參數格式檢查\n- 確認必填欄位驗證\n- 檢查郵箱格式驗證\n- 驗證密碼強度檢查"
+          }
+        }
+      ],
+      "description": "用戶註冊相關測試，包含正常註冊、重複註冊、參數驗證等場景"
+    },
+    {
+      "name": "郵件驗證測試",
+      "item": [
+        {
+          "name": "PUT /api/auth/verifyemail - 郵件驗證",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 設置測試驗證碼（實際應用中需要從郵件獲取）",
+                  "pm.environment.set('verificationCode', '123456');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 根據響應狀態執行不同驗證",
+                  "if (pm.response.code === 200) {",
+                  "    eval(pm.globals.get('validateSuccessResponse'))();",
+                  "    ",
+                  "    pm.test('郵件驗證成功', function () {",
+                  "        const jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.success).to.be.true;",
+                  "        pm.expect(jsonData.message).to.include('驗證成功');",
+                  "    });",
+                  "} else {",
+                  "    eval(pm.globals.get('validateErrorResponse'))(400, '驗證碼');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{randomEmail}}\",\n  \"verificationCode\": \"{{verificationCode}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verifyemail",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verifyemail"]
+            },
+            "description": "測試郵件驗證功能\n\n**測試重點:**\n- 驗證碼格式檢查\n- 郵箱匹配驗證\n- 驗證成功響應\n\n**注意:** 實際測試中需要從郵件系統獲取真實驗證碼"
+          }
+        },
+        {
+          "name": "PUT /api/auth/resendverifycode - 重發驗證碼",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateSuccessResponse'))();",
+                  "",
+                  "pm.test('重發驗證碼成功', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.message).to.include('發送成功');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{randomEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resendverifycode",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resendverifycode"]
+            },
+            "description": "測試重發驗證碼功能\n\n**測試重點:**\n- 郵箱存在性檢查\n- 驗證碼重發邏輯\n- 頻率限制檢查"
+          }
+        }
+      ],
+      "description": "郵件驗證相關測試，包含驗證碼驗證和重發功能"
+    },
+    {
+      "name": "用戶登入測試",
+      "item": [
+        {
+          "name": "POST /api/auth/login - 正常登入",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateSuccessResponse'))();",
+                  "",
+                  "pm.test('登入響應結構應正確', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('success', true);",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    pm.expect(jsonData.data).to.have.property('token');",
+                  "    pm.expect(jsonData.data).to.have.property('user');",
+                  "});",
+                  "",
+                  "// 驗證JWT Token",
+                  "eval(pm.globals.get('validateJWTToken'))('token');",
+                  "",
+                  "pm.test('用戶資訊應完整', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const user = jsonData.data.user;",
+                  "    pm.expect(user).to.have.property('id');",
+                  "    pm.expect(user).to.have.property('username');",
+                  "    pm.expect(user).to.have.property('email');",
+                  "    pm.expect(user).to.have.property('userType');",
+                  "    pm.expect(user).to.not.have.property('password');",
+                  "});",
+                  "",
+                  "// 保存Token供後續測試使用",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.token) {",
+                  "        pm.environment.set('authToken', jsonData.data.token);",
+                  "        console.log('已保存認證Token');",
+                  "        ",
+                  "        // 計算Token過期時間",
+                  "        try {",
+                  "            const payload = JSON.parse(atob(jsonData.data.token.split('.')[1]));",
+                  "            const expiry = new Date(payload.exp * 1000);",
+                  "            pm.environment.set('tokenExpiry', expiry.toISOString());",
+                  "            console.log('Token過期時間:', expiry);",
+                  "        } catch (e) {",
+                  "            console.log('無法解析Token過期時間');",
+                  "        }",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{randomEmail}}\",\n  \"password\": \"{{randomPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "測試用戶正常登入流程\n\n**測試重點:**\n- 驗證登入憑證\n- 檢查JWT Token生成\n- 確認用戶資訊返回\n- 驗證Token有效期設置"
+          }
+        },
+        {
+          "name": "POST /api/auth/login - 錯誤憑證",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateErrorResponse'))(401, '用戶名或密碼錯誤');",
+                  "",
+                  "pm.test('不應返回敏感資訊', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.not.have.property('token');",
+                  "    pm.expect(jsonData).to.not.have.property('user');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{randomEmail}}\",\n  \"password\": \"wrongpassword\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "測試錯誤憑證的登入處理\n\n**測試重點:**\n- 驗證錯誤憑證檢查\n- 確認安全錯誤響應\n- 檢查不洩露敏感資訊"
+          }
+        },
+        {
+          "name": "POST /api/auth/login - SQL注入測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateErrorResponse'))(400, '');",
+                  "",
+                  "pm.test('應防護SQL注入攻擊', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData).to.not.have.property('token');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin' OR '1'='1\",\n  \"password\": \"' OR '1'='1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "測試SQL注入攻擊防護\n\n**測試重點:**\n- 驗證SQL注入防護\n- 確認參數清理機制\n- 檢查安全響應處理"
+          }
+        }
+      ],
+      "description": "用戶登入相關測試，包含正常登入、錯誤憑證、安全測試等場景"
+    },
+    {
+      "name": "Token管理測試",
+      "item": [
+        {
+          "name": "GET /api/auth/parse - 解析Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateSuccessResponse'))();",
+                  "",
+                  "pm.test('Token解析結果應正確', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('success', true);",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    pm.expect(jsonData.data).to.have.property('userId');",
+                  "    pm.expect(jsonData.data).to.have.property('username');",
+                  "    pm.expect(jsonData.data).to.have.property('roles');",
+                  "});",
+                  "",
+                  "pm.test('用戶角色資訊應存在', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const roles = jsonData.data.roles;",
+                  "    pm.expect(roles).to.be.an('array');",
+                  "    pm.expect(roles.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/parse",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "parse"]
+            },
+            "description": "測試JWT Token解析功能\n\n**測試重點:**\n- 驗證Token解析正確性\n- 檢查用戶資訊提取\n- 確認角色資訊完整性\n\n**前置條件:** 需要有效的authToken"
+          }
+        },
+        {
+          "name": "GET /api/auth/parse - 無效Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateErrorResponse'))(401, 'Token無效');",
+                  "",
+                  "pm.test('應拒絕無效Token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid.token.here"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/parse",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "parse"]
+            },
+            "description": "測試無效Token的處理\n\n**測試重點:**\n- 驗證Token格式檢查\n- 確認安全錯誤響應\n- 檢查錯誤處理機制"
+          }
+        },
+        {
+          "name": "GET /api/auth/isexpired - 檢查Token過期",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateSuccessResponse'))();",
+                  "",
+                  "pm.test('過期檢查結果應正確', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('success', true);",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    pm.expect(jsonData.data).to.have.property('expired');",
+                  "    pm.expect(jsonData.data.expired).to.be.a('boolean');",
+                  "});",
+                  "",
+                  "pm.test('應包含過期時間資訊', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (!jsonData.data.expired) {",
+                  "        pm.expect(jsonData.data).to.have.property('expiresAt');",
+                  "        pm.expect(jsonData.data).to.have.property('remainingTime');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/isexpired",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "isexpired"]
+            },
+            "description": "測試Token過期檢查功能\\n\\n**測試重點:**\\n- 驗證過期狀態檢查\\n- 確認過期時間計算\\n- 檢查剩餘時間資訊"
+          }
+        },
+        {
+          "name": "GET /api/auth/isexpired - 過期Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateErrorResponse'))(401, 'Token已過期');",
+                  "",
+                  "pm.test('應正確識別過期Token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0IiwiZXhwIjoxNjAwMDAwMDAwfQ.expired"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/isexpired",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "isexpired"]
+            },
+            "description": "測試過期Token的處理\\n\\n**測試重點:**\\n- 驗證過期Token檢測\\n- 確認錯誤響應格式\\n- 檢查安全處理機制"
+          }
+        }
+      ],
+      "description": "Token管理相關測試，包含Token解析、過期檢查等功能"
+    },
+    {
+      "name": "密碼管理測試",
+      "item": [
+        {
+          "name": "POST /api/auth/forgetpassword - 忘記密碼",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateSuccessResponse'))();",
+                  "",
+                  "pm.test('忘記密碼請求成功', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.message).to.include('重設密碼郵件已發送');",
+                  "});",
+                  "",
+                  "pm.test('不應洩露用戶存在性', function () {",
+                  "    // 無論用戶是否存在，都應返回相同的成功訊息",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.not.include('用戶不存在');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"email\\\": \\\"{{randomEmail}}\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgetpassword",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "forgetpassword"]
+            },
+            "description": "測試忘記密碼功能\\n\\n**測試重點:**\\n- 驗證郵件發送機制\\n- 確認安全響應處理\\n- 檢查用戶隱私保護"
+          }
+        },
+        {
+          "name": "POST /api/auth/forgetpassword - 不存在郵箱",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateSuccessResponse'))();",
+                  "",
+                  "pm.test('應返回統一成功訊息', function () {",
+                  "    // 為了安全考量，不應洩露用戶是否存在",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.message).to.include('重設密碼郵件已發送');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"email\\\": \\\"nonexistent@example.com\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgetpassword",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "forgetpassword"]
+            },
+            "description": "測試不存在郵箱的安全處理\\n\\n**測試重點:**\\n- 驗證用戶隱私保護\\n- 確認統一響應格式\\n- 檢查安全設計原則"
+          }
+        },
+        {
+          "name": "POST /api/auth/resetpassword - 重設密碼",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 設置測試重設碼（實際應用中需要從郵件獲取）",
+                  "pm.environment.set('resetCode', 'RESET123456');",
+                  "pm.environment.set('newPassword', 'NewPass123!');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 根據響應狀態執行不同驗證",
+                  "if (pm.response.code === 200) {",
+                  "    eval(pm.globals.get('validateSuccessResponse'))();",
+                  "    ",
+                  "    pm.test('密碼重設成功', function () {",
+                  "        const jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.success).to.be.true;",
+                  "        pm.expect(jsonData.message).to.include('密碼重設成功');",
+                  "    });",
+                  "} else {",
+                  "    eval(pm.globals.get('validateErrorResponse'))(400, '重設碼');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"email\\\": \\\"{{randomEmail}}\\\",\\n  \\\"resetCode\\\": \\\"{{resetCode}}\\\",\\n  \\\"newPassword\\\": \\\"{{newPassword}}\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resetpassword",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resetpassword"]
+            },
+            "description": "測試密碼重設功能\\n\\n**測試重點:**\\n- 驗證重設碼有效性\\n- 確認新密碼格式檢查\\n- 檢查密碼更新機制\\n\\n**注意:** 實際測試中需要從郵件系統獲取真實重設碼"
+          }
+        },
+        {
+          "name": "POST /api/auth/resetpassword - 無效重設碼",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateErrorResponse'))(400, '重設碼無效');",
+                  "",
+                  "pm.test('應拒絕無效重設碼', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"email\\\": \\\"{{randomEmail}}\\\",\\n  \\\"resetCode\\\": \\\"INVALID123\\\",\\n  \\\"newPassword\\\": \\\"NewPass123!\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resetpassword",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resetpassword"]
+            },
+            "description": "測試無效重設碼的處理\\n\\n**測試重點:**\\n- 驗證重設碼驗證機制\\n- 確認錯誤響應格式\\n- 檢查安全防護措施"
+          }
+        }
+      ],
+      "description": "密碼管理相關測試，包含忘記密碼、重設密碼等功能"
+    },
+    {
+      "name": "安全性測試",
+      "item": [
+        {
+          "name": "POST /api/auth/login - 暴力破解防護",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 多次失敗登入後應觸發防護機制",
+                  "if (pm.response.code === 429) {",
+                  "    pm.test('暴力破解防護已啟動', function () {",
+                  "        pm.response.to.have.status(429);",
+                  "        const jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.message).to.include('請求過於頻繁');",
+                  "    });",
+                  "} else {",
+                  "    eval(pm.globals.get('validateErrorResponse'))(401, '用戶名或密碼錯誤');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"username\\\": \\\"{{randomEmail}}\\\",\\n  \\\"password\\\": \\\"wrongpassword\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "測試暴力破解防護機制\\n\\n**測試重點:**\\n- 驗證頻率限制\\n- 確認防護觸發條件\\n- 檢查安全響應處理\\n\\n**注意:** 需要多次執行此請求來觸發防護"
+          }
+        },
+        {
+          "name": "POST /api/auth/register - XSS防護測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "eval(pm.globals.get('validateErrorResponse'))(400, '參數驗證失敗');",
+                  "",
+                  "pm.test('應防護XSS攻擊', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    // 確認響應中不包含腳本內容",
+                  "    const responseText = JSON.stringify(jsonData);",
+                  "    pm.expect(responseText).to.not.include('<script>');",
+                  "    pm.expect(responseText).to.not.include('javascript:');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"username\\\": \\\"<script>alert('xss')</script>\\\",\\n  \\\"email\\\": \\\"test@example.com\\\",\\n  \\\"password\\\": \\\"javascript:alert('xss')\\\",\\n  \\\"userType\\\": \\\"CLIENT\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "測試XSS攻擊防護\\n\\n**測試重點:**\\n- 驗證輸入清理機制\\n- 確認腳本過濾功能\\n- 檢查安全響應處理"
+          }
+        }
+      ],
+      "description": "安全性相關測試，包含暴力破解防護、XSS防護等安全機制"
+    }
+  ]
+}

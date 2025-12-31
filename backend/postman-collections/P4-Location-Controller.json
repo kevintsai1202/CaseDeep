@@ -1,0 +1,918 @@
+{
+  "info": {
+    "name": "P4-Location-Controller",
+    "description": "LocationController API測試集合 - 地區管理功能測試\n\n測試範圍：\n- 地區列表查詢功能\n- 地區詳情查詢功能\n- 地區創建功能\n- 地區更新功能\n- 地區刪除功能\n- 地區搜尋功能\n- 管理員權限驗證\n- 錯誤處理測試\n- 數據驗證測試\n\n基礎路徑：/api/admin/locations\n權限要求：管理員權限\nEntity：Location (id, location)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "{{baseUrl}}",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "{{adminToken}}",
+      "type": "string"
+    },
+    {
+      "key": "userToken",
+      "value": "{{userToken}}",
+      "type": "string"
+    },
+    {
+      "key": "locationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testLocationName",
+      "value": "Test Location",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "地區管理功能測試",
+      "item": [
+        {
+          "name": "獲取所有地區列表",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Response contains location objects with required fields', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.length > 0) {",
+                  "        const location = responseJson[0];",
+                  "        pm.expect(location).to.have.property('id');",
+                  "        pm.expect(location).to.have.property('location');",
+                  "        pm.expect(location.id).to.be.a('number');",
+                  "        pm.expect(location.location).to.be.a('string');",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations"]
+            }
+          }
+        },
+        {
+          "name": "創建新地區",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains created location data', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('id');",
+                  "    pm.expect(responseJson).to.have.property('location');",
+                  "    pm.expect(responseJson.location).to.equal(pm.collectionVariables.get('testLocationName'));",
+                  "});",
+                  "",
+                  "pm.test('Set locationId for subsequent tests', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.collectionVariables.set('locationId', responseJson.id);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 3000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": \"{{testLocationName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations"]
+            }
+          }
+        },
+        {
+          "name": "根據ID獲取地區詳情",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains location details', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('id');",
+                  "    pm.expect(responseJson).to.have.property('location');",
+                  "    pm.expect(responseJson.id).to.equal(parseInt(pm.collectionVariables.get('locationId')));",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations/{{locationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations", "{{locationId}}"]
+            }
+          }
+        },
+        {
+          "name": "更新地區資訊",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains updated location data', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('id');",
+                  "    pm.expect(responseJson).to.have.property('location');",
+                  "    pm.expect(responseJson.location).to.equal('Updated Test Location');",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 3000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": \"Updated Test Location\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations/{{locationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations", "{{locationId}}"]
+            }
+          }
+        },
+        {
+          "name": "根據名稱搜尋地區",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains location data', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('id');",
+                  "    pm.expect(responseJson).to.have.property('location');",
+                  "    pm.expect(responseJson.location).to.include('Updated Test Location');",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations/search/Updated Test Location",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations", "search", "Updated Test Location"]
+            }
+          }
+        },
+        {
+          "name": "刪除地區",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 204', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "",
+                  "pm.test('Response body is empty', function () {",
+                  "    pm.expect(pm.response.text()).to.be.empty;",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 3000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations/{{locationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations", "{{locationId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "權限與安全測試",
+      "item": [
+        {
+          "name": "無Token訪問測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 or 403', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations"]
+            }
+          }
+        },
+        {
+          "name": "一般用戶權限測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations"]
+            }
+          }
+        },
+        {
+          "name": "無效Token測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid_token_here",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "錯誤處理與邊界測試",
+      "item": [
+        {
+          "name": "創建地區 - 空白名稱測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations"]
+            }
+          }
+        },
+        {
+          "name": "創建地區 - 超長名稱測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": \"This is a very long location name that exceeds the maximum allowed length of 100 characters and should trigger a validation error\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations"]
+            }
+          }
+        },
+        {
+          "name": "獲取不存在的地區",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations", "99999"]
+            }
+          }
+        },
+        {
+          "name": "更新不存在的地區",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": \"Updated Location\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations", "99999"]
+            }
+          }
+        },
+        {
+          "name": "刪除不存在的地區",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations", "99999"]
+            }
+          }
+        },
+        {
+          "name": "搜尋不存在的地區",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 2000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations/search/NonExistentLocation",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations", "search", "NonExistentLocation"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "性能與負載測試",
+      "item": [
+        {
+          "name": "地區列表查詢性能測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 1000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                  "});",
+                  "",
+                  "pm.test('Response size is reasonable', function () {",
+                  "    pm.expect(pm.response.responseSize).to.be.below(1000000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations"]
+            }
+          }
+        },
+        {
+          "name": "併發地區查詢測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is acceptable under load', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});",
+                  "",
+                  "pm.test('Response is consistent', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "數據驗證測試",
+      "item": [
+        {
+          "name": "地區名稱格式驗證",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Location name is properly formatted', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.location).to.be.a('string');",
+                  "    pm.expect(responseJson.location.length).to.be.above(0);",
+                  "    pm.expect(responseJson.location.length).to.be.below(101);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 3000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": \"Valid Location Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations"]
+            }
+          }
+        },
+        {
+          "name": "特殊字符處理測試",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Special characters are handled correctly', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.location).to.include('測試地區');",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 3000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": \"測試地區-Special@Characters#123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "locations"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

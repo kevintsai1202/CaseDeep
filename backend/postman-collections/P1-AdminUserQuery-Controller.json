@@ -1,0 +1,58 @@
+{
+  "info": {
+    "name": "P1 - AdminUserQuery Controller",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth - Admin Login",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"}],
+        "url": {"raw": "{{baseUrl}}/api/auth/login", "host":["{{baseUrl}}"], "path":["api","auth","login"]},
+        "body": {"mode":"raw","raw":"{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}"}
+      },
+      "event": [{"listen":"test","script":{"exec":["pm.test('200',()=>pm.response.to.have.status(200)); var j={}; try{j=pm.response.json()}catch(e){}; if(j&&j.token){ pm.environment.set('adminToken', j.token); } pm.expect(pm.environment.get('adminToken')).to.be.ok;"],"type":"text/javascript"}}]
+    },
+    {
+      "name": "Search Users",
+      "request": {
+        "method": "GET",
+        "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/users/search?industry=All%20Industries&userType=&page=0&size=10&sortBy=displayOrder&sortDir=asc&searchKeyword=",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","admin","users","search"],
+          "query": [
+            {"key":"industry","value":"All Industries"},
+            {"key":"userType","value":""},
+            {"key":"page","value":"0"},
+            {"key":"size","value":"10"},
+            {"key":"sortBy","value":"displayOrder"},
+            {"key":"sortDir","value":"asc"},
+            {"key":"searchKeyword","value":""}
+          ]
+        }
+      },
+      "event": [{"listen":"test","script":{"exec":["pm.test('200',()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}]
+    },
+    {
+      "name": "User Statistics",
+      "request": {
+        "method": "GET",
+        "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/users/statistics?industry=&userType=",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","admin","users","statistics"],
+          "query": [
+            {"key":"industry","value":""},
+            {"key":"userType","value":""}
+          ]
+        }
+      },
+      "event": [{"listen":"test","script":{"exec":["pm.test('200',()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}]
+    }
+  ]
+}
+

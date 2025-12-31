@@ -1,0 +1,482 @@
+{
+  "info": {
+    "name": "P3-Showcase-Controller",
+    "description": "Case Manager AI Chat - ShowcaseController API測試集合\n\n本測試集合涵蓋ShowcaseController的完整功能測試，包括：\n- 作品展示創建與管理\n- 檔案上傳與替換功能\n- 訂單範本連結功能\n- 展示查詢與瀏覽功能\n- 權限控制與安全性測試\n- 錯誤處理與邊界條件測試\n\n測試環境要求：\n- 後端服務：http://localhost:8080\n- 認證方式：JWT Bearer Token\n- 測試用戶：需要PROVIDER類型用戶進行測試\n- 檔案上傳：支援multipart/form-data格式",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "showcaseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fileId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "orderTemplateId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "providerId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Showcase Management Tests",
+      "description": "作品展示基本管理功能測試組",
+      "item": [
+        {
+          "name": "Create Showcase - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('sId');",
+                  "    pm.expect(responseJson).to.have.property('title');",
+                  "    pm.expect(responseJson).to.have.property('files');",
+                  "    pm.expect(responseJson.files).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Showcase title matches request', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.title).to.eql('我的專業作品展示');",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.collectionVariables.set('showcaseId', responseJson.sId);",
+                  "    console.log('Showcase ID saved:', responseJson.sId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"我的專業作品展示\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/showcase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "showcase"]
+            }
+          }
+        },
+        {
+          "name": "Get My Showcases",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is array', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Showcase items have correct structure', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.length > 0) {",
+                  "        const showcase = responseJson[0];",
+                  "        pm.expect(showcase).to.have.property('sId');",
+                  "        pm.expect(showcase).to.have.property('title');",
+                  "        pm.expect(showcase).to.have.property('files');",
+                  "        pm.expect(showcase.files).to.be.an('array');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/showcase/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "showcase", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "File Upload Management Tests",
+      "description": "檔案上傳與管理功能測試組",
+      "item": [
+        {
+          "name": "Upload Showcase File - Success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const showcaseId = pm.collectionVariables.get('showcaseId');",
+                  "if (!showcaseId) {",
+                  "    throw new Error('Showcase ID not found. Please run Create Showcase test first.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('File response has correct structure', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('fId');",
+                  "    pm.expect(responseJson).to.have.property('fileName');",
+                  "    pm.expect(responseJson).to.have.property('size');",
+                  "    pm.expect(responseJson).to.have.property('url');",
+                  "    pm.expect(responseJson).to.have.property('uuid');",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.collectionVariables.set('fileId', responseJson.fId);",
+                  "    console.log('File ID saved:', responseJson.fId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test-image.jpg",
+                  "description": "測試圖片檔案"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/showcase/{{showcaseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "showcase", "{{showcaseId}}"]
+            }
+          }
+        },
+        {
+          "name": "Replace Showcase File - Success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const fileId = pm.collectionVariables.get('fileId');",
+                  "if (!fileId) {",
+                  "    throw new Error('File ID not found. Please run Upload File test first.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('New file response has correct structure', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('fId');",
+                  "    pm.expect(responseJson).to.have.property('fileName');",
+                  "    pm.expect(responseJson).to.have.property('size');",
+                  "    pm.expect(responseJson).to.have.property('url');",
+                  "    pm.expect(responseJson).to.have.property('uuid');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test-image-2.jpg",
+                  "description": "替換用的測試圖片"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/showcase/filedata/{{fileId}}/change",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "showcase", "filedata", "{{fileId}}", "change"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Order Template Linking Tests",
+      "description": "訂單範本連結功能測試組",
+      "item": [
+        {
+          "name": "Link Showcase to Order Template - Success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const showcaseId = pm.collectionVariables.get('showcaseId');",
+                  "if (!showcaseId) {",
+                  "    throw new Error('Showcase ID not found. Please run Create Showcase test first.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('sId');",
+                  "    pm.expect(responseJson).to.have.property('title');",
+                  "    pm.expect(responseJson).to.have.property('orderTemplate');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/showcase/{{showcaseId}}/{{orderTemplateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "showcase", "{{showcaseId}}", "{{orderTemplateId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Provider Showcase Browsing Tests",
+      "description": "提供者展示瀏覽功能測試組",
+      "item": [
+        {
+          "name": "Get Provider Showcases - Success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const userId = pm.collectionVariables.get('userId');",
+                  "if (userId) {",
+                  "    pm.collectionVariables.set('providerId', userId);",
+                  "} else {",
+                  "    pm.collectionVariables.set('providerId', '1');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is array', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Showcase items have correct structure', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.length > 0) {",
+                  "        const showcase = responseJson[0];",
+                  "        pm.expect(showcase).to.have.property('sId');",
+                  "        pm.expect(showcase).to.have.property('title');",
+                  "        pm.expect(showcase).to.have.property('files');",
+                  "        pm.expect(showcase.files).to.be.an('array');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/showcase/provider/{{providerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "showcase", "provider", "{{providerId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Security and Error Handling Tests",
+      "description": "安全性與錯誤處理測試組",
+      "item": [
+        {
+          "name": "Create Showcase - No Authentication",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Requires authentication', function () {",
+                  "    pm.expect(pm.response.code).to.eql(401);",
+                  "});",
+                  "",
+                  "pm.test('Returns appropriate error message', function () {",
+                  "    const responseText = pm.response.text();",
+                  "    pm.expect(responseText).to.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"未認證測試展示\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/showcase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "showcase"]
+            }
+          }
+        },
+        {
+          "name": "Get My Showcases - No Authentication",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Requires authentication', function () {",
+                  "    pm.expect(pm.response.code).to.eql(401);",
+                  "});",
+                  "",
+                  "pm.test('Returns error response', function () {",
+                  "    const responseText = pm.response.text();",
+                  "    pm.expect(responseText).to.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/showcase/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "showcase", "me"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

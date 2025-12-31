@@ -1,0 +1,840 @@
+{
+	"info": {
+		"_postman_id": "order-controller-tests",
+		"name": "P2 - Order Controller Tests",
+		"description": "Complete test collection for OrderController endpoints covering order lifecycle management",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"console.log('Running Order Controller test: ' + pm.info.requestName);",
+					"if (!pm.environment.get('test_order_id')) {",
+					"    pm.environment.set('test_order_id', '1');",
+					"}",
+					"if (!pm.environment.get('test_order_base62no')) {",
+					"    pm.environment.set('test_order_base62no', 'ABC123');",
+					"}",
+					"if (!pm.environment.get('test_client_id')) {",
+					"    pm.environment.set('test_client_id', '1');",
+					"}"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Order Basic Operations",
+			"item": [
+				{
+					"name": "Create New Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201 Created', function () {",
+									"    pm.expect(pm.response.code).to.equal(201);",
+									"});",
+									"",
+									"pm.test('Response has order data', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('orderId');",
+									"    pm.expect(responseJson).to.have.property('base62no');",
+									"    pm.expect(responseJson).to.have.property('title');",
+									"    ",
+									"    pm.environment.set('test_order_id', responseJson.orderId);",
+									"    pm.environment.set('test_order_base62no', responseJson.base62no);",
+									"    console.log('Created Order ID: ' + responseJson.orderId);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Test Order for API Testing\",\n    \"description\": \"This is a comprehensive test order for OrderController API testing\",\n    \"categoryId\": 1,\n    \"budget\": 10000.00,\n    \"deadline\": \"2024-12-31T23:59:59\",\n    \"requirements\": \"Complete API testing requirements\",\n    \"location\": \"Taipei, Taiwan\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Client Orders",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Response is an array', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/orders/myclientorders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"myclientorders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by Base62 Number",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    pm.test('Response has order data', function () {",
+									"        const responseJson = pm.response.json();",
+									"        pm.expect(responseJson).to.have.property('orderId');",
+									"        pm.expect(responseJson).to.have.property('base62no');",
+									"        pm.expect(responseJson).to.have.property('title');",
+									"    });",
+									"}",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/orders/{{test_order_base62no}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{test_order_base62no}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404, 400]);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"IN_PROGRESS\",\n    \"statusNote\": \"Order status updated for testing purposes\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders/{{test_order_id}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{test_order_id}}",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Price",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404, 400]);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"price\": 15000.00,\n    \"priceNote\": \"Updated price for testing purposes\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders/{{test_order_id}}/price",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{test_order_id}}",
+								"price"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Order Confirmation Process",
+			"item": [
+				{
+					"name": "Select Confirmation Item",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.environment.set('test_bid', '1');",
+									"pm.environment.set('test_iid', '1');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404, 400]);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/orders/confirmation/{{test_bid}}/select/{{test_iid}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"confirmation",
+								"{{test_bid}}",
+								"select",
+								"{{test_iid}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Confirmation Text",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404, 400]);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"confirmationText\": \"This is a test confirmation text for API testing purposes\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders/confirmation/{{test_bid}}/text",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"confirmation",
+								"{{test_bid}}",
+								"text"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Quotation Process",
+			"item": [
+				{
+					"name": "Request Quote",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404, 400]);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"message\": \"Please provide a detailed quote for this order\",\n    \"requirements\": \"Include all costs and timeline\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders/{{test_order_base62no}}/requestquote",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{test_order_base62no}}",
+								"requestquote"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Quote",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404, 400]);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"quotedPrice\": 12000.00,\n    \"estimatedDays\": 30,\n    \"description\": \"Detailed quote for the requested service\",\n    \"terms\": \"Payment terms and conditions\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders/{{test_order_base62no}}/sendquote",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{test_order_base62no}}",
+								"sendquote"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Contract Management",
+			"item": [
+				{
+					"name": "Client Sign Contract",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.environment.set('test_contract_id', '1');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404, 400]);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"signature\": \"CLIENT_SIGNATURE_HASH\",\n    \"signedDate\": \"2024-01-15T10:30:00\",\n    \"ipAddress\": \"192.168.1.100\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders/contract/{{test_contract_id}}/clientsign",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"contract",
+								"{{test_contract_id}}",
+								"clientsign"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Provider Sign Contract",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404, 400]);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"signature\": \"PROVIDER_SIGNATURE_HASH\",\n    \"signedDate\": \"2024-01-15T11:30:00\",\n    \"ipAddress\": \"192.168.1.101\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders/contract/{{test_contract_id}}/providersign",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"contract",
+								"{{test_contract_id}}",
+								"providersign"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Payment Processing",
+			"item": [
+				{
+					"name": "Process Payment",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.environment.set('test_payment_id', '1');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404, 400]);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/orders/payment/{{test_payment_id}}/pay",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"payment",
+								"{{test_payment_id}}",
+								"pay"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Receipt",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404, 400]);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(3000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "receipt",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "description",
+									"value": "Payment receipt for testing",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders/payment/{{test_payment_id}}/receipt",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"payment",
+								"{{test_payment_id}}",
+								"receipt"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Delivery Management",
+			"item": [
+				{
+					"name": "Get Order Deliveries",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 OK or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    pm.test('Response is an array', function () {",
+									"        const responseJson = pm.response.json();",
+									"        pm.expect(responseJson).to.be.an('array');",
+									"    });",
+									"}",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/orders/{{test_order_base62no}}/deliveries",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{test_order_base62no}}",
+								"deliveries"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Delivery Item",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201 Created or 404 Not Found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([201, 404, 400]);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    pm.test('Response has delivery item data', function () {",
+									"        const responseJson = pm.response.json();",
+									"        pm.expect(responseJson).to.have.property('deliveryItemId');",
+									"        pm.expect(responseJson).to.have.property('title');",
+									"        ",
+									"        pm.environment.set('test_delivery_item_id', responseJson.deliveryItemId);",
+									"        console.log('Created Delivery Item ID: ' + responseJson.deliveryItemId);",
+									"    });",
+									"}",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Test Delivery Item\",\n    \"description\": \"This is a test delivery item for API testing\",\n    \"deliveryDate\": \"2024-12-31T23:59:59\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders/{{test_order_base62no}}/deliveries",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{test_order_base62no}}",
+								"deliveries"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

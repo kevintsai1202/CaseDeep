@@ -1,0 +1,1068 @@
+{
+  "info": {
+    "name": "P3-Certification-Controller",
+    "description": "Case Manager AI Chat - CertificationController API測試集合\n\n本測試集合涵蓋認證管理系統的完整功能測試，包括：\n- 認證申請創建與管理\n- 文件上傳功能（身份證明、交易記錄）\n- 認證申請提交與簽名\n- 費用處理與佣金設定\n- 管理員審核流程（批准/拒絕）\n- 認證狀態查詢與列表功能\n\n測試範圍：\n- 基礎路徑：/api/certifications\n- 端點數量：15個\n- 權限控制：用戶認證 + 管理員權限\n- 檔案上傳：multipart/form-data格式\n- 業務流程：完整認證生命週期",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// 全域前置腳本 - 設定基本環境變數",
+          "if (!pm.environment.get('baseUrl')) {",
+          "    pm.environment.set('baseUrl', 'http://localhost:8080');",
+          "}",
+          "",
+          "// 檢查認證Token",
+          "if (!pm.environment.get('authToken')) {",
+          "    console.log('Warning: authToken not set. Please login first.');",
+          "}",
+          "",
+          "// 設定測試用認證ID",
+          "if (!pm.environment.get('test_certification_id')) {",
+          "    pm.environment.set('test_certification_id', 'testCert123');",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// 全域測試腳本 - 基本回應驗證",
+          "pm.test('Response time is reasonable', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "// 檢查回應格式",
+          "if (pm.response.code === 200) {",
+          "    pm.test('Response has valid JSON format', function () {",
+          "        pm.response.to.be.json;",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Certification Application Management",
+      "description": "認證申請基本管理功能測試，包括創建申請、查詢詳情和列表功能",
+      "item": [
+        {
+          "name": "Create Certification Application",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains certification data', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('cenobase62');",
+                  "    pm.expect(responseJson).to.have.property('status');",
+                  "    ",
+                  "    // 儲存認證ID供後續測試使用",
+                  "    if (responseJson.cenobase62) {",
+                  "        pm.environment.set('test_certification_id', responseJson.cenobase62);",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Initial status is correct', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.status).to.be.oneOf(['DRAFT', 'CREATED']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications"]
+            }
+          }
+        },
+        {
+          "name": "Get Certification by Number",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains certification details', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('cenobase62');",
+                  "    pm.expect(responseJson).to.have.property('status');",
+                  "    pm.expect(responseJson).to.have.property('createTime');",
+                  "});",
+                  "",
+                  "pm.test('Certification ID matches request', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    const requestedId = pm.environment.get('test_certification_id');",
+                  "    pm.expect(responseJson.cenobase62).to.equal(requestedId);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List My Certifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Each certification has required fields', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.length > 0) {",
+                  "        responseJson.forEach(cert => {",
+                  "            pm.expect(cert).to.have.property('cenobase62');",
+                  "            pm.expect(cert).to.have.property('status');",
+                  "            pm.expect(cert).to.have.property('createTime');",
+                  "        });",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Document Upload Management",
+      "description": "文件上傳功能測試，包括身份證明和交易記錄文件上傳",
+      "item": [
+        {
+          "name": "Upload Identity Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains updated certification', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('cenobase62');",
+                  "    pm.expect(responseJson).to.have.property('identityDocument');",
+                  "});",
+                  "",
+                  "pm.test('Identity document is uploaded', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.identityDocument).to.not.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test-identity.jpg",
+                  "description": "測試身份證明文件"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/uploadidentity",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "uploadidentity"]
+            }
+          }
+        },
+        {
+          "name": "Upload Deal Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains updated certification', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('cenobase62');",
+                  "    pm.expect(responseJson).to.have.property('dealDocument');",
+                  "});",
+                  "",
+                  "pm.test('Deal document is uploaded', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.dealDocument).to.not.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test-deal.pdf",
+                  "description": "測試交易記錄文件"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/uploaddeal",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "uploaddeal"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Certification Processing",
+      "description": "認證處理流程測試，包括簽名、費用處理、提交等功能",
+      "item": [
+        {
+          "name": "Sign Certification Application",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains signed certification', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('cenobase62');",
+                  "    pm.expect(responseJson).to.have.property('signName');",
+                  "});",
+                  "",
+                  "pm.test('Signature is recorded', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.signName).to.equal('John Doe');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/signname/John Doe",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "signname", "John Doe"]
+            }
+          }
+        },
+        {
+          "name": "Input Fee Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains fee information', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('cenobase62');",
+                  "    pm.expect(responseJson).to.have.property('feeCode');",
+                  "});",
+                  "",
+                  "pm.test('Fee code is recorded', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.feeCode).to.equal('FEE001');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/feecode/FEE001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "feecode", "FEE001"]
+            }
+          }
+        },
+        {
+          "name": "Process Certification Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains payment information', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('cenobase62');",
+                  "    pm.expect(responseJson).to.have.property('paymentAmount');",
+                  "});",
+                  "",
+                  "pm.test('Payment amount is correct', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.paymentAmount).to.equal(100.0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/payment/100.0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "payment", "100.0"]
+            }
+          }
+        },
+        {
+          "name": "Set Commission Rate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains commission rate', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.a('number');",
+                  "    pm.expect(responseJson).to.equal(0.15);",
+                  "});",
+                  "",
+                  "pm.test('Commission rate is within valid range', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.at.least(0.0);",
+                  "    pm.expect(responseJson).to.be.at.most(1.0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/commissionrate/0.15",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "commissionrate", "0.15"]
+            }
+          }
+        },
+        {
+          "name": "Submit Certification Application",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains submitted certification', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('cenobase62');",
+                  "    pm.expect(responseJson).to.have.property('status');",
+                  "});",
+                  "",
+                  "pm.test('Status is updated to submitted', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.status).to.equal('SUBMITTED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "submit"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Management Functions",
+      "description": "管理員審核功能測試，包括查看所有認證、已提交認證列表、批准和拒絕功能",
+      "item": [
+        {
+          "name": "List All Certifications (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Admin can see all certifications', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.length > 0) {",
+                  "        responseJson.forEach(cert => {",
+                  "            pm.expect(cert).to.have.property('cenobase62');",
+                  "            pm.expect(cert).to.have.property('status');",
+                  "            pm.expect(cert).to.have.property('userId');",
+                  "        });",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "all"]
+            }
+          }
+        },
+        {
+          "name": "List Submitted Certifications (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('All certifications are submitted', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.length > 0) {",
+                  "        responseJson.forEach(cert => {",
+                  "            pm.expect(cert.status).to.equal('SUBMITTED');",
+                  "        });",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/status/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "status", "submit"]
+            }
+          }
+        },
+        {
+          "name": "Approve Certification (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains approved certification', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('cenobase62');",
+                  "    pm.expect(responseJson).to.have.property('status');",
+                  "    pm.expect(responseJson).to.have.property('score');",
+                  "});",
+                  "",
+                  "pm.test('Status is updated to approved', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.status).to.equal('APPROVED');",
+                  "});",
+                  "",
+                  "pm.test('Score is recorded correctly', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.score).to.equal(85.0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/approve/85.0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "approve", "85.0"]
+            }
+          }
+        },
+        {
+          "name": "Reject Certification (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains rejected certification', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('cenobase62');",
+                  "    pm.expect(responseJson).to.have.property('status');",
+                  "    pm.expect(responseJson).to.have.property('rejectComment');",
+                  "});",
+                  "",
+                  "pm.test('Status is updated to rejected', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.status).to.equal('REJECTED');",
+                  "});",
+                  "",
+                  "pm.test('Reject comment is recorded', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.rejectComment).to.include('Insufficient documentation');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/reject/Insufficient documentation provided",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "reject", "Insufficient documentation provided"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Handling Tests",
+      "description": "錯誤處理和邊界條件測試",
+      "item": [
+        {
+          "name": "Get Non-existent Certification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error message is provided', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "    pm.expect(responseJson.message).to.include('not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/nonexistent123",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "nonexistent123"]
+            }
+          }
+        },
+        {
+          "name": "Upload File Without Authentication",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Authentication error message', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "    pm.expect(responseJson.message).to.include('Unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test-file.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/uploadidentity",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "uploadidentity"]
+            }
+          }
+        },
+        {
+          "name": "Invalid Commission Rate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Validation error message', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "    pm.expect(responseJson.message).to.include('Invalid commission rate');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/commissionrate/1.5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "commissionrate", "1.5"]
+            }
+          }
+        },
+        {
+          "name": "Admin Function Without Admin Role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test('Access denied error message', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "    pm.expect(responseJson.message).to.include('Access denied');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "all"]
+            }
+          }
+        },
+        {
+          "name": "Submit Already Submitted Certification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Business logic error message', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "    pm.expect(responseJson.message).to.include('already submitted');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "submit"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Security Tests",
+      "description": "安全性測試，包括權限控制和資料驗證",
+      "item": [
+        {
+          "name": "Access Other User's Certification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 403 or 404', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([403, 404]);",
+                  "});",
+                  "",
+                  "pm.test('Access control is enforced', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/otherUserCert123",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "otherUserCert123"]
+            }
+          }
+        },
+        {
+          "name": "SQL Injection Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 or 404', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                  "});",
+                  "",
+                  "pm.test('SQL injection is prevented', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('message');",
+                  "    pm.expect(responseJson.message).to.not.include('SQL');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/'; DROP TABLE certifications; --",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "'; DROP TABLE certifications; --"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Performance Tests",
+      "description": "效能測試，包括大量資料處理和回應時間驗證",
+      "item": [
+        {
+          "name": "List Large Number of Certifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is acceptable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});",
+                  "",
+                  "pm.test('Response contains array', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "me"]
+            }
+          }
+        },
+        {
+          "name": "Upload Large File Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 413', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 413]);",
+                  "});",
+                  "",
+                  "pm.test('File size limit is enforced', function () {",
+                  "    if (pm.response.code === 413) {",
+                  "        const responseJson = pm.response.json();",
+                  "        pm.expect(responseJson.message).to.include('file size');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "large-test-file.jpg",
+                  "description": "大檔案測試"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/certifications/{{test_certification_id}}/uploadidentity",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "certifications", "{{test_certification_id}}", "uploadidentity"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

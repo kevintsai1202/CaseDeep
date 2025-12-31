@@ -1,0 +1,628 @@
+{
+	"info": {
+		"_postman_id": "p3-userdata-controller-tests",
+		"name": "P3-UserData-Controller",
+		"description": "Case Manager AI Chat - P3階段UserDataController完整測試集合",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "User Profile Management",
+			"description": "用戶資料管理相關測試",
+			"item": [
+				{
+					"name": "Get Current User Profile",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"console.log('測試: 獲取當前用戶資料');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const response = pm.response.json();",
+									"if (response.id) {",
+									"    pm.environment.set('test_user_id', response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/profile",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Get User Roles",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/roles",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "roles"]
+						}
+					}
+				},
+				{
+					"name": "Change Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"newPassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/changepassword",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "changepassword"]
+						}
+					}
+				},
+				{
+					"name": "Change User Type",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userType\": \"PROVIDER\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/changeusertype",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "changeusertype"]
+						}
+					}
+				},
+				{
+					"name": "Update Personal Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"測試\",\n    \"lastName\": \"用戶\",\n    \"phone\": \"0912345678\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/personal",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "personal"]
+						}
+					}
+				},
+				{
+					"name": "Update Business Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"companyName\": \"測試科技有限公司\",\n    \"businessNumber\": \"12345678\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/business",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "business"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "User Introduction Management",
+			"description": "用戶介紹檔案管理相關測試",
+			"item": [
+				{
+					"name": "Get User Introduction Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/intro/{{test_user_id}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "intro", "{{test_user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Introduction Title",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"專業軟體開發工程師\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/intro/title",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "intro", "title"]
+						}
+					}
+				},
+				{
+					"name": "Update Introduction Content",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"content\": \"專業軟體開發工程師，具備豐富經驗\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/intro/content",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "intro", "content"]
+						}
+					}
+				},
+				{
+					"name": "Upload Introduction Video",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "video",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/intro/video",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "intro", "video"]
+						}
+					}
+				},
+				{
+					"name": "Set Introduction Video URL",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"videoUrl\": \"https://www.youtube.com/watch?v=example\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/intro/videourl",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "intro", "videourl"]
+						}
+					}
+				},
+				{
+					"name": "Upload Digital Signature",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "signature",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/intro/signature",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "intro", "signature"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Account Management",
+			"description": "帳戶管理相關測試",
+			"item": [
+				{
+					"name": "Update Payment Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"accountNumber\": \"1234567890\",\n    \"bankName\": \"測試銀行\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/intro/paymentaccount",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "intro", "paymentaccount"]
+						}
+					}
+				},
+				{
+					"name": "Update Receiving Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('狀態碼應為200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"accountNumber\": \"0987654321\",\n    \"bankName\": \"收款銀行\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profile/intro/receivingaccount",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profile", "intro", "receivingaccount"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// 全域前置腳本",
+					"if (!pm.environment.get('baseUrl')) {",
+					"    pm.environment.set('baseUrl', 'http://localhost:8080');",
+					"}",
+					"",
+					"if (!pm.environment.get('authToken')) {",
+					"    console.warn('警告: 未設定authToken，請先執行認證測試');",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// 全域測試腳本",
+					"pm.test('回應時間應合理', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});",
+					"",
+					"if (pm.response.code !== 200) {",
+					"    console.error('請求失敗:', pm.response.status, pm.response.text());",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "test_user_id",
+			"value": "1",
+			"type": "string"
+		}
+	]
+}

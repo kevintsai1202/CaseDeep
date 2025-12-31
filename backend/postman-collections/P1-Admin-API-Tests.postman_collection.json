@@ -1,0 +1,181 @@
+{
+  "info": {
+    "name": "P1 - Admin API Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "9efc7fbb-5a0a-4d6f-9a4f-2f2b3e4a7c01",
+    "description": "Admin 後台 API 測試集合（依程式實作對齊）。請搭配 Admin-Local 環境使用。"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"]},
+            "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}"}
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "var json = {}; try { json = pm.response.json(); } catch(e) {} if (json && json.token) { pm.environment.set('adminToken', json.token); }",
+                  "pm.test('Token 存在', function(){ pm.expect(pm.environment.get('adminToken')).to.be.a('string').and.not.empty; });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/admin/users", "host": ["{{baseUrl}}"], "path": ["api","admin","users"]}
+          },
+          "event": [{"listen": "test", "script": {"exec": ["pm.test('200', ()=>pm.response.to.have.status(200));"], "type": "text/javascript"}}]
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{adminToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{baseUrl}}/api/admin/users", "host": ["{{baseUrl}}"], "path": ["api","admin","users"]},
+            "body": {"mode": "raw", "raw": "{\n  \"username\": \"test_admin\",\n  \"email\": \"admin+test@example.com\",\n  \"password\": \"Admin123!\",\n  \"roleNames\": [\"ADMIN\"],\n  \"roleIndustryScopes\": []\n}"}
+          },
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('201', ()=>pm.response.to.have.status(201));",
+            "var j={}; try{j=pm.response.json()}catch(e){}; if(j&&j.id){ pm.environment.set('userId', j.id); }"
+          ], "type": "text/javascript"}}]
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{adminToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{baseUrl}}/api/admin/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","users","{{userId}}"]},
+            "body": {"mode": "raw", "raw": "{\n  \"username\": \"test_admin_updated\",\n  \"email\": \"admin+test@example.com\",\n  \"enabled\": true,\n  \"roleNames\": [\"ADMIN\"],\n  \"roleIndustryScopes\": []\n}"}
+          },
+          "event": [{"listen": "test", "script": {"exec": ["pm.test('200', ()=>pm.response.to.have.status(200));"], "type": "text/javascript"}}]
+        },
+        {
+          "name": "Enable/Disable User",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/admin/users/{{userId}}/enable?enabled=true", "host": ["{{baseUrl}}"], "path": ["api","admin","users","{{userId}}","enable"], "query": [{"key":"enabled","value":"true"}]}
+          },
+          "event": [{"listen": "test", "script": {"exec": ["pm.test('200', ()=>pm.response.to.have.status(200));"], "type": "text/javascript"}}]
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{adminToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{baseUrl}}/api/admin/users/{{userId}}/reset-password", "host": ["{{baseUrl}}"], "path": ["api","admin","users","{{userId}}","reset-password"]},
+            "body": {"mode": "raw", "raw": "{\n  \"newPassword\": \"Admin456!\"\n}"}
+          },
+          "event": [{"listen": "test", "script": {"exec": ["pm.test('200', ()=>pm.response.to.have.status(200));"], "type": "text/javascript"}}]
+        },
+        { "name": "Move Up", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/users/{{userId}}/move-up", "host": ["{{baseUrl}}"], "path": ["api","admin","users","{{userId}}","move-up"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "Move Down", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/users/{{userId}}/move-down", "host": ["{{baseUrl}}"], "path": ["api","admin","users","{{userId}}","move-down"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "Batch Order", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"},{"key":"Content-Type","value":"application/json"}], "url": {"raw": "{{baseUrl}}/api/admin/users/batch-order", "host": ["{{baseUrl}}"], "path": ["api","admin","users","batch-order"] }, "body": {"mode":"raw","raw":"{\n  \"orders\": [ { \"userId\": {{userId}}, \"order\": 1 } ]\n}"} }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "List Industry Scopes", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/users/{{userId}}/industry-scopes", "host": ["{{baseUrl}}"], "path": ["api","admin","users","{{userId}}","industry-scopes"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "List Scopes By Role", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/users/{{userId}}/industry-scopes/role/ADMIN", "host": ["{{baseUrl}}"], "path": ["api","admin","users","{{userId}}","industry-scopes","role","ADMIN"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "Delete User", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","users","{{userId}}"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('204 or 200', function(){ pm.expect([200,204]).to.include(pm.response.code); });"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        { "name": "List Orders", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/orders", "host": ["{{baseUrl}}"], "path": ["api","admin","orders"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "Get Order", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","orders","{{orderId}}"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200 or 404', function(){ pm.expect([200,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] },
+        { "name": "Update Order Status", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/orders/{{orderId}}/status?newStatus=PAID&reason=test", "host": ["{{baseUrl}}"], "path": ["api","admin","orders","{{orderId}}","status"], "query": [{"key":"newStatus","value":"PAID"},{"key":"reason","value":"test"}] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200 or 400 or 404', function(){ pm.expect([200,400,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "Commissions",
+      "item": [
+        { "name": "List Commissions", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/commissions", "host": ["{{baseUrl}}"], "path": ["api","admin","commissions"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "Update Commission Status", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/commissions/{{commissionId}}/status?newStatus=PAID", "host": ["{{baseUrl}}"], "path": ["api","admin","commissions","{{commissionId}}","status"], "query": [{"key":"newStatus","value":"PAID"}] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200 or 404', function(){ pm.expect([200,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] },
+        { "name": "Get Commission by IdStr", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/commissions/{{commissionId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","commissions","{{commissionId}}"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200 or 404', function(){ pm.expect([200,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "RevenueShares",
+      "item": [
+        { "name": "List RevenueShares", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/revenue-shares", "host": ["{{baseUrl}}"], "path": ["api","admin","revenue-shares"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "Update RevenueShare", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"},{"key":"Content-Type","value":"application/json"}], "url": {"raw": "{{baseUrl}}/api/admin/revenue-shares/{{revenueShareId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","revenue-shares","{{revenueShareId}}"] }, "body": {"mode":"raw","raw":"{\n  \"status\": \"PAID\",\n  \"paymentTime\": \"2025-01-01T00:00:00Z\"\n}"} }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "Upgrades",
+      "item": [
+        { "name": "List Upgrades", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/upgrades", "host": ["{{baseUrl}}"], "path": ["api","admin","upgrades"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "Certifications",
+      "item": [
+        { "name": "Update Certification", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"},{"key":"Content-Type","value":"application/json"}], "url": {"raw": "{{baseUrl}}/api/admin/certifications/{{certificationId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","certifications","{{certificationId}}"] }, "body": {"mode":"raw","raw":"{\n  \"status\": \"APPROVED\"\n}"} }, "event":[{"listen":"test","script":{"exec":["pm.test('200 or 404', function(){ pm.expect([200,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "Invitations",
+      "item": [
+        { "name": "Update Invitation Status", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/invitations/{{invitationId}}/status", "host": ["{{baseUrl}}"], "path": ["api","admin","invitations","{{invitationId}}","status"] }, "body": {"mode":"raw","raw":"{\n  \"status\": \"APPROVED\"\n}"} }, "event":[{"listen":"test","script":{"exec":["pm.test('200 or 404', function(){ pm.expect([200,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        { "name": "List Roles", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/roles", "host": ["{{baseUrl}}"], "path": ["api","admin","roles"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "Get Role", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","roles","{{roleId}}"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200 or 404', function(){ pm.expect([200,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] },
+        { "name": "Create Role", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"},{"key":"Content-Type","value":"application/json"}], "url": {"raw": "{{baseUrl}}/api/admin/roles", "host": ["{{baseUrl}}"], "path": ["api","admin","roles"] }, "body": {"mode":"raw","raw":"{\n  \"roleName\": \"QA_ADMIN\",\n  \"description\": \"QA Admin role\"\n}"} }, "event":[{"listen":"test","script":{"exec":["pm.test('201', ()=>pm.response.to.have.status(201)); var j={}; try{j=pm.response.json()}catch(e){}; if(j&&j.id){ pm.environment.set('roleId', j.id); }"],"type":"text/javascript"}}] },
+        { "name": "Update Role", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"},{"key":"Content-Type","value":"application/json"}], "url": {"raw": "{{baseUrl}}/api/admin/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","roles","{{roleId}}"] }, "body": {"mode":"raw","raw":"{\n  \"roleName\": \"QA_ADMIN\",\n  \"description\": \"QA Admin role (updated)\"\n}"} }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "Delete Role", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","roles","{{roleId}}"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('204 or 404', function(){ pm.expect([204,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "Currencies",
+      "item": [
+        { "name": "List Currencies", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/currencies", "host": ["{{baseUrl}}"], "path": ["api","admin","currencies"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "Create Currency", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"},{"key":"Content-Type","value":"application/json"}], "url": {"raw": "{{baseUrl}}/api/admin/currencies", "host": ["{{baseUrl}}"], "path": ["api","admin","currencies"] }, "body": {"mode":"raw","raw":"{\n  \"currency\": \"TWD\",\n  \"description\": \"New Taiwan Dollar\"\n}"} }, "event":[{"listen":"test","script":{"exec":["pm.test('201 or 200', function(){ pm.expect([200,201]).to.include(pm.response.code); var j={}; try{j=pm.response.json()}catch(e){}; if(j&&j.id){ pm.environment.set('currencyId', j.id); }});"],"type":"text/javascript"}}] },
+        { "name": "Get Currency", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/currencies/{{currencyId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","currencies","{{currencyId}}"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200 or 404', function(){ pm.expect([200,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] },
+        { "name": "Update Currency", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"},{"key":"Content-Type","value":"application/json"}], "url": {"raw": "{{baseUrl}}/api/admin/currencies/{{currencyId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","currencies","{{currencyId}}"] }, "body": {"mode":"raw","raw":"{\n  \"currency\": \"TWD\",\n  \"description\": \"New Taiwan Dollar (updated)\"\n}"} }, "event":[{"listen":"test","script":{"exec":["pm.test('200', ()=>pm.response.to.have.status(200));"],"type":"text/javascript"}}] },
+        { "name": "Delete Currency", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/currencies/{{currencyId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","currencies","{{currencyId}}"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('204 or 404', function(){ pm.expect([204,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] },
+        { "name": "Search Currency", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": {"raw": "{{baseUrl}}/api/admin/currencies/search/TWD", "host": ["{{baseUrl}}"], "path": ["api","admin","currencies","search","TWD"] } }, "event":[{"listen":"test","script":{"exec":["pm.test('200 or 404', function(){ pm.expect([200,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] }
+      ]
+    },
+    {
+      "name": "SystemLists",
+      "item": [
+        { "name": "Create SystemList Item", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"},{"key":"Content-Type","value":"application/json"}], "url": {"raw": "{{baseUrl}}/api/admin/systemlists", "host": ["{{baseUrl}}"], "path": ["api","admin","systemlists"] }, "body": {"mode":"raw","raw":"{\n  \"type\": \"CATEGORY\",\n  \"name\": \"Test Item\"\n}"} }, "event":[{"listen":"test","script":{"exec":["pm.test('201 or 200', function(){ pm.expect([200,201]).to.include(pm.response.code); });"],"type":"text/javascript"}}] },
+        { "name": "Update SystemList Item", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"},{"key":"Content-Type","value":"application/json"}], "url": {"raw": "{{baseUrl}}/api/admin/systemlists/1", "host": ["{{baseUrl}}"], "path": ["api","admin","systemlists","1"] }, "body": {"mode":"raw","raw":"{\n  \"type\": \"CATEGORY\",\n  \"name\": \"Test Item Updated\"\n}"} }, "event":[{"listen":"test","script":{"exec":["pm.test('200 or 404', function(){ pm.expect([200,404]).to.include(pm.response.code); });"],"type":"text/javascript"}}] }
+      ]
+    }
+  ]
+}
+
